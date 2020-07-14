@@ -1,10 +1,12 @@
 ﻿using Microsoft.Extensions.Options;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
 using MongoDB.Driver;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using SystemAPIApplication.bo;
 
 namespace SystemAPIApplication.Services
 {
@@ -36,8 +38,8 @@ namespace SystemAPIApplication.Services
         public List<BsonDocument> Query(string[] ids)
         {
             
-            var collection = _client.GetDatabase(_config.Document).
-                GetCollection<BsonDocument>(_config.Collection);
+            var collection = _client.GetDatabase(_config.MockSetting.Database).
+                GetCollection<BsonDocument>(_config.MockSetting.Collection);
             //var collection = _client.GetDatabase("hb").GetCollection<BsonDocument>("hbmock");
 
             var filter = Builders<BsonDocument>.Filter;
@@ -67,13 +69,26 @@ namespace SystemAPIApplication.Services
 
         public List<BsonDocument> QueryAll()
         {
-            var collection = _client.GetDatabase(_config.Document).
-                GetCollection<BsonDocument>(_config.Collection);
+            var collection = _client.GetDatabase(_config.MockSetting.Database).
+                GetCollection<BsonDocument>(_config.MockSetting.Collection);
             //var collection = _client.GetDatabase("hb").GetCollection<BsonDocument>("hbmock");
 
             //FilterDefinition<BsonDocument> filterDefinition = null;
             var filter = Builders<BsonDocument>.Filter;
             return collection.Find(filter.Empty).ToList();
+        }
+
+        public RuleBo QueryRule(string name)
+        {
+            var collection = _client.GetDatabase(_config.RuleSetting.Database)
+                                   .GetCollection<BsonDocument>(_config.RuleSetting.Collection);
+            var list = collection.Find(Builders<BsonDocument>.Filter.Eq("name", name)).ToList();
+            foreach (var doc in list)
+            {
+                var bo = BsonSerializer.Deserialize<RuleBo>(doc);
+                return bo;
+            }
+            return null;
         }
 
     }

@@ -5,18 +5,16 @@ using System.Threading.Tasks;
 
 namespace SystemAPIApplication.vo
 {
-    public class FalloutVO
+    public class GeometryMergeVO
     {
-        public FalloutVO(string nuclearExplosionID, string damageGeometry, double radValue,double value,string unit)
+        public GeometryMergeVO(string geometry, double radValue,double value, string unit)
         {
-            this.nuclearExplosionID = nuclearExplosionID;
-            this.damageGeometry = damageGeometry;
+            this.damageGeometry = geometry;
             this.radValue = radValue;
             this.value = value;
             this.unit = unit;
         }
 
-        public string nuclearExplosionID { get; set; }
         public string damageGeometry { get; set; }
         public double radValue { get; set; }
         public double value { get; set; }

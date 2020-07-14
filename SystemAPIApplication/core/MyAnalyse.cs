@@ -129,7 +129,7 @@ namespace SystemAPIApplication.core
         /// <returns>km</returns>
         public double CalcNuclearPulseRadius(double t, double km, double e)
         {
-            const double e0 = 0.89784 * 100000; // 单位：V/m
+            const double e0 = 0.89784 * 10000; // 单位：V/m （原来是5次方，现在改成4次方）
             double temp = e / (e0 * Math.Pow(t * 1000.0, 1 / 3.0) / Math.Pow(Math.E, Math.Pow(Math.Abs(km - 5), 1 / 2.0)));
 
             return Math.Sqrt(1 / temp) - 0.01;
@@ -157,7 +157,9 @@ namespace SystemAPIApplication.core
                                                 double kt,
                                                 double fallout_wind,
                                                 double fallout_angle,
-                                                DamageEnumeration level)
+                                                DamageEnumeration level,
+                                                ref double maximumDownwindDistance,
+                                                ref double maximumWidth)
         {
             // 输入
             //double lng = 116.391667;
@@ -183,18 +185,21 @@ namespace SystemAPIApplication.core
             if (hob_ft > 0)
             {
                 // 空爆
-                return do_fallout(lng, lat, kt, fallout_wind, ff, fallout_angle, airburst, hob_ft, level);
+                return do_fallout(lng, lat, kt, fallout_wind, ff, fallout_angle, airburst, hob_ft, level,
+                    ref maximumDownwindDistance, ref maximumWidth);
             }
             else
             {
-                return do_fallout(lng, lat, kt, fallout_wind, ff, fallout_angle, airburst, -1, level);
+                return do_fallout(lng, lat, kt, fallout_wind, ff, fallout_angle, airburst, -1, level,
+                    ref maximumDownwindDistance, ref maximumWidth);
             }
         }
 
 
 
         private List<Coor> do_fallout(double lng, double lat,
-            double kt, double wind, double fission_fraction, double angle, bool airburst, double hob_ft, DamageEnumeration level)
+            double kt, double wind, double fission_fraction, double angle, bool airburst, double hob_ft, DamageEnumeration level,
+            ref double maximumDownwindDistance, ref double maximumWidth)
         {
             if (kt < 1 || kt > 10 * Math.Pow(10, 5))
             {
@@ -233,14 +238,15 @@ namespace SystemAPIApplication.core
             //}
             int[] rad_doses = new int[] { 1, 10, 100, 1000 };
 
-            return draw_fallout(lng, lat, angle, kt, kt_frac, rad_doses, airburst, fission_fraction, wind, level);
+            return draw_fallout(lng, lat, angle, kt, kt_frac, rad_doses, airburst, fission_fraction, wind, level, ref maximumDownwindDistance, ref maximumWidth);
 
         }
 
         //draws fallout using the current settings. we keep these separate from the other function so I can just call it whenever I want to refresh it.
         private List<Coor> draw_fallout(double lng, double lat, double angle,
             double kt, double kt_frac, int[] rad_doses,
-            bool airburst, double fission_fraction, double wind, DamageEnumeration level)
+            bool airburst, double fission_fraction, double wind, DamageEnumeration level,
+            ref double maximumDownwindDistance, ref double maximumWidth)
         {
             Dictionary<int, Dictionary<string, double>> sfss;
             if (kt_frac > 0 && airburst)
@@ -251,6 +257,8 @@ namespace SystemAPIApplication.core
             {
                 sfss = SFSS_fallout(kt, rad_doses, (fission_fraction / 100), wind);
             }
+
+
 
             var steps = 15;
 
@@ -277,8 +285,23 @@ namespace SystemAPIApplication.core
             //    }
 
             //}
-            var ss = sfss[(int)level];//i = 3
+            var ss = sfss[1];//i = 3
+            switch (level)
+            {
+                case DamageEnumeration.Light:
+                    ss = sfss[1];
+                    break;
+                case DamageEnumeration.Heavy:
+                    ss = sfss[100];
+                    break;
+                case DamageEnumeration.Destroy:
+                    ss = sfss[1000];
+                    break;
+            }
             List<Coor> ll = plot_fallout(lng, lat, SFSS_fallout_points(ss, angle, steps), (int)level);
+            const double mi2km = 1.60934;
+            maximumDownwindDistance = ss["downwind_cloud_distance"] * mi2km;
+            maximumWidth = ss["max_cloud_width"] * 2 * mi2km;
             return ll;
         }
 
@@ -1569,6 +1592,8 @@ namespace SystemAPIApplication.core
 
         private double range_from_psi_hob_1kt_interpolated(double psi, double hob)
         {
+            double result = -1;
+
             var h = hob;
 
             var psi_ = psi_find(psi);
@@ -1577,15 +1602,237 @@ namespace SystemAPIApplication.core
             if (h <= 0)
             {
                 //easy case
-                double result = lerp(rngs[p1][0], p1, rngs[p2][0], p2, psi);
+                result = lerp(rngs[p1][0], p1, rngs[p2][0], p2, psi);
                 return result;
             }
 
             //first check if it is out of bounds
+            var max_hob_outer = hobs[p1][hobs[p1].Length - 1];
+            var max_hob_inner = hobs[p2][hobs[p2].Length - 1];
+            var max_hob_lerp = lerp(max_hob_outer, p1, max_hob_inner, p2, psi);
 
-            // 暂时未移植
+            if (h > max_hob_lerp)
+            {
+                return 0;
+            }
 
-            return 0;
+            //start on the hard case...
+
+            //the proportion between the two PSIs
+            var proportion = lerp(0, p2, 1, p1, psi);
+
+            var near_hobs = array_closest(hobs[p1], h);
+
+            //search start index
+            var outer_index = near_hobs[0];
+            var search_direction = 1;
+
+            var intercept = getInterpolatedPosition(p2, p1, outer_index);
+            if (intercept == null)
+            {
+                return 0;
+            }
+
+            var h_low_index = 0.0; var h_low_prop = 0.0; var r_low_prop = 0.0;
+            var h_high_index = 0.0; var h_high_prop = 0.0; var r_high_prop = 0.0;
+
+
+            while (intercept.lat < h)
+            {
+                var rng_at_prop = lerp(rngs[p1][outer_index], 1, intercept.lng, 0, proportion);
+                var hob_at_prop = lerp(hobs[p1][outer_index], 1, intercept.lat, 0, proportion);
+                if (hob_at_prop < h)
+                {
+                    if (outer_index > h_low_index || h_low_index > 0)
+                    {
+                        h_low_index = outer_index;
+                        h_low_prop = hob_at_prop;
+                        r_low_prop = rng_at_prop;
+                    }
+                }
+                if (hob_at_prop > h)
+                {
+                    if (h_low_index > 0)
+                    {
+                        h_high_prop = hob_at_prop;
+                        r_high_prop = rng_at_prop;
+                        result = lerp(r_low_prop, h_low_prop, r_high_prop, h_high_prop, h);
+                        return result;
+                        break;
+                    }
+                }
+
+                outer_index += search_direction;
+
+                if ((outer_index >= hobs[p1].Length) || (outer_index < 0))
+                {
+                    return -1;
+                    break;
+                }
+                else
+                {
+                    intercept = getInterpolatedPosition(p2, p1, outer_index);
+                    if (intercept == null) return -1;
+                }
+            }
+
+            if (result > 0 && h_low_index > 0)
+            {
+                var rng_at_prop = lerp(rngs[p1][outer_index], 1, intercept.lng, 0, proportion);
+                var hob_at_prop = lerp(hobs[p1][outer_index], 1, intercept.lat, 0, proportion);
+                h_high_prop = hob_at_prop;
+                r_high_prop = rng_at_prop;
+                result = lerp(r_low_prop, h_low_prop, r_high_prop, h_high_prop, h);
+
+                return result;
+            }
+            else
+            {
+                //so low that it fails -- just take the last two measurements and use those
+                var rng_at_prop = lerp(rngs[p1][outer_index], 1, intercept.lng, 0, proportion);
+                var hob_at_prop = lerp(hobs[p1][outer_index], 1, intercept.lat, 0, proportion);
+                h_high_prop = hob_at_prop;
+                r_high_prop = rng_at_prop;
+                intercept = getInterpolatedPosition(p2, p1, outer_index - 1);
+                if (intercept == null) return -1;
+                rng_at_prop = lerp(rngs[p1][outer_index - 1], 1, intercept.lng, 0, proportion);
+                hob_at_prop = lerp(hobs[p1][outer_index - 1], 1, intercept.lat, 0, proportion);
+                h_low_prop = hob_at_prop;
+                r_low_prop = rng_at_prop;
+                result = lerp(r_low_prop, h_low_prop, r_high_prop, h_high_prop, h);
+                return result;
+            }
+
+
+            return 0;//failed for some reason;
+        }
+
+        private Coor getInterpolatedPosition(double inner_psi, double outer_psi, int outer_index)
+        {
+
+            var inner_index = 0; //we start from index zero (HOB = 0) and move "up." the choice of a starting index and the method of traversig the index could be optimized. 
+
+            while (linesIntersect(
+                        0, 0,
+                        rngs[outer_psi][outer_index], hobs[outer_psi][outer_index],
+
+                        rngs[inner_psi][inner_index], hobs[inner_psi][inner_index],
+                        rngs[inner_psi][inner_index + 1], hobs[inner_psi][inner_index + 1]
+            ) == false)
+            {
+                inner_index++;
+                if (inner_index > rngs[inner_psi].Length || inner_index - 1 < 0)
+                {
+                    return null;
+                }
+            }
+            return getLineLineIntersection(0, 0, rngs[outer_psi][outer_index], hobs[outer_psi][outer_index],
+                                     rngs[inner_psi][inner_index + 1], hobs[inner_psi][inner_index + 1], rngs[inner_psi][inner_index], hobs[inner_psi][inner_index]);
+
+        }
+
+        //get line segment intersection point
+        private Coor getLineLineIntersection(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4)
+        {
+            var det1And2 = getLineLineIntersection_det(x1, y1, x2, y2);
+            var det3And4 = getLineLineIntersection_det(x3, y3, x4, y4);
+            var x1LessX2 = x1 - x2;
+            var y1LessY2 = y1 - y2;
+            var x3LessX4 = x3 - x4;
+            var y3LessY4 = y3 - y4;
+            var det1Less2And3Less4 = getLineLineIntersection_det(x1LessX2, y1LessY2, x3LessX4, y3LessY4);
+            if (det1Less2And3Less4 == 0)
+            {
+                // the denominator is zero so the lines are parallel and there's either no solution (or multiple solutions if the lines overlap) so return null.
+                return null;
+            }
+            var x = (getLineLineIntersection_det(det1And2, x1LessX2,
+                  det3And4, x3LessX4) /
+                  det1Less2And3Less4);
+            var y = (getLineLineIntersection_det(det1And2, y1LessY2,
+                  det3And4, y3LessY4) /
+                  det1Less2And3Less4);
+            return new Coor(x, y);
+        }
+
+        private int getLineLineIntersection_det(int a, int b, int c, int d)
+        {
+            return a * d - b * c;
+        }
+        //determines whether two line segments intersect
+        private bool linesIntersect(int x1, int y1, int x2, int y2, int x3, int y3, int x4, int y4)
+        {
+            // Return false if either of the lines have zero length
+            if (x1 == x2 && y1 == y2 ||
+                  x3 == x4 && y3 == y4)
+            {
+                return false;
+            }
+            // Fastest method, based on Franklin Antonio's "Faster Line Segment Intersection" topic "in Graphics Gems III" book (http://www.graphicsgems.org/)
+            var ax = x2 - x1;
+            var ay = y2 - y1;
+            var bx = x3 - x4;
+            var by = y3 - y4;
+            var cx = x1 - x3;
+            var cy = y1 - y3;
+
+            var alphaNumerator = by * cx - bx * cy;
+            var commonDenominator = ay * bx - ax * by;
+            if (commonDenominator > 0)
+            {
+                if (alphaNumerator < 0 || alphaNumerator > commonDenominator)
+                {
+                    return false;
+                }
+            }
+            else if (commonDenominator < 0)
+            {
+                if (alphaNumerator > 0 || alphaNumerator < commonDenominator)
+                {
+                    return false;
+                }
+            }
+            var betaNumerator = ax * cy - ay * cx;
+            if (commonDenominator > 0)
+            {
+                if (betaNumerator < 0 || betaNumerator > commonDenominator)
+                {
+                    return false;
+                }
+            }
+            else if (commonDenominator < 0)
+            {
+                if (betaNumerator > 0 || betaNumerator < commonDenominator)
+                {
+                    return false;
+                }
+            }
+            if (commonDenominator == 0)
+            {
+                // This code wasn't in Franklin Antonio's method. It was added by Keith Woodward.
+                // The lines are parallel.
+                // Check if they're collinear.
+                var y3LessY1 = y3 - y1;
+                var collinearityTestForP3 = x1 * (y2 - y3) + x2 * (y3LessY1) + x3 * (y1 - y2);   // see http://mathworld.wolfram.com/Collinear.html
+                                                                                                 // If p3 is collinear with p1 and p2 then p4 will also be collinear, since p1-p2 is parallel with p3-p4
+                if (collinearityTestForP3 == 0)
+                {
+                    // The lines are collinear. Now check if they overlap.
+                    if (x1 >= x3 && x1 <= x4 || x1 <= x3 && x1 >= x4 ||
+                          x2 >= x3 && x2 <= x4 || x2 <= x3 && x2 >= x4 ||
+                          x3 >= x1 && x3 <= x2 || x3 <= x1 && x3 >= x2)
+                    {
+                        if (y1 >= y3 && y1 <= y4 || y1 <= y3 && y1 >= y4 ||
+                              y2 >= y3 && y2 <= y4 || y2 <= y3 && y2 >= y4 ||
+                              y3 >= y1 && y3 <= y2 || y3 <= y1 && y3 >= y2)
+                        {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+            return true;
         }
 
         private int[] psi_find(double psi)
