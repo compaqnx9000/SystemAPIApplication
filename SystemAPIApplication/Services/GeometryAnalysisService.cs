@@ -1,16 +1,13 @@
 ﻿using Microsoft.Extensions.Options;
 using MongoDB.Bson;
+//using MyCore;
 using NetTopologySuite.Geometries;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using SystemAPIApplication.bo;
-using SystemAPIApplication.core;
-using SystemAPIApplication.enums;
-using SystemAPIApplication.Utils;
 using SystemAPIApplication.vo;
-
 namespace SystemAPIApplication.Services
 {
     public class GeometryAnalysisService : IGeometryAnalysisService
@@ -41,7 +38,7 @@ namespace SystemAPIApplication.Services
 
                 // 传入的是吨，要变成千吨;输入的是米：要变成：英尺
 
-                double r = GetFireBallRadius(yield/1000, alt* Utils.Const.M2FT);
+                double r = GetFireBallRadius(yield/1000, alt* MyCore.Utils.Const.M2FT);
 
                 multis.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, 0, ""));
             }
@@ -63,7 +60,7 @@ namespace SystemAPIApplication.Services
 
                 // 传入的是吨，要变成千吨;输入的是米：要变成：英尺
 
-                double r = GetFireBallRadius(yield/1000, alt * Utils.Const.M2FT);
+                double r = GetFireBallRadius(yield/1000, alt * MyCore.Utils.Const.M2FT);
 
                 multis.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, 0, ""));
             }
@@ -92,7 +89,7 @@ namespace SystemAPIApplication.Services
                 else
                     geom = geom.Union(GetFireBallGeometry(lon, lat, yield, alt));
             }
-            return new GeometryVO(Translate.Geometry2GeoJson(geom), 0, "");
+            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), 0, "");
 
         }
         public GeometryVO FireballMerge(string[] bo)
@@ -119,7 +116,7 @@ namespace SystemAPIApplication.Services
                     geom = geom.Union(GetFireBallGeometry(lon, lat, yield, alt));
             }
 
-            return new GeometryVO(Translate.Geometry2GeoJson(geom), 0, "");
+            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), 0, "");
         }
 
         #region 早期核辐射
@@ -148,8 +145,8 @@ namespace SystemAPIApplication.Services
                     limits = rule.limits;
                 }
 
-                MyAnalyse myAnalyse = new MyAnalyse();
-                double r = myAnalyse.CalcNuclearRadiationRadius(yield / 1000, alt * Utils.Const.M2FT, limits);
+                MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
+                double r = myAnalyse.CalcNuclearRadiationRadius(yield / 1000, alt * MyCore.Utils.Const.M2FT, limits);
 
                 // 返回值的alt单位是：米
                 multis.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, limits, unit));
@@ -181,8 +178,8 @@ namespace SystemAPIApplication.Services
                     limits = rule.limits;
                 }
 
-                MyAnalyse myAnalyse = new MyAnalyse();
-                double r = myAnalyse.CalcNuclearRadiationRadius(yield / 1000, alt * Utils.Const.M2FT, limits);
+                MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
+                double r = myAnalyse.CalcNuclearRadiationRadius(yield / 1000, alt * MyCore.Utils.Const.M2FT, limits);
 
                 // 返回值的alt单位是：米
                 multis.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, limits, unit));
@@ -222,7 +219,7 @@ namespace SystemAPIApplication.Services
                 else
                     geom = geom.Union(GetNuclearRadiationGeometry(lon, lat, yield, alt, limits));
             }
-            return new GeometryVO(Translate.Geometry2GeoJson(geom), limits, unit);
+            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), limits, unit);
 
         }
         public GeometryVO NuclearradiationMerge(string[] bo)
@@ -258,7 +255,7 @@ namespace SystemAPIApplication.Services
                 else
                     geom = geom.Union(GetNuclearRadiationGeometry(lon, lat, yield, alt, limits));
             }
-            return new GeometryVO(Translate.Geometry2GeoJson(geom), limits, unit);
+            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), limits, unit);
 
         }
 
@@ -361,7 +358,7 @@ namespace SystemAPIApplication.Services
                 else
                     geom = geom.Union(GetShockWaveGeometry(lon, lat, yield, alt, limits));
             }
-            return new GeometryVO(Translate.Geometry2GeoJson(geom), limits, unit);
+            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), limits, unit);
 
         }
         public GeometryVO AirblastMerge(string[] bo)
@@ -396,7 +393,7 @@ namespace SystemAPIApplication.Services
                 else
                     geom = geom.Union(GetShockWaveGeometry(lon, lat, yield, alt, limits));
             }
-            return new GeometryVO(Translate.Geometry2GeoJson(geom), limits, unit);
+            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), limits, unit);
 
         }
         #endregion
@@ -426,7 +423,7 @@ namespace SystemAPIApplication.Services
                 string id = fireball.GetValue("NuclearExplosionID").AsString;
 
                 // 传入的是吨，要变成千吨;输入的是米：要变成：英尺
-                double r = GetThermalRadiationRadius(yield / 1000, alt * Const.M2FT, limits);
+                double r = GetThermalRadiationRadius(yield / 1000, alt * MyCore.Utils.Const.M2FT, limits);
 
                 // 返回值的alt单位是：米
                 multis.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, limits, unit));
@@ -500,7 +497,7 @@ namespace SystemAPIApplication.Services
                 else
                     geom = geom.Union(GetThermalRadiationGeometry(lon, lat, yield, alt, limits));
             }
-            return new GeometryVO(Translate.Geometry2GeoJson(geom), limits, unit);
+            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), limits, unit);
 
         }
         public GeometryVO ThermalradiationMerge(string[] bo)
@@ -528,14 +525,14 @@ namespace SystemAPIApplication.Services
                 yield /= 1000;
 
                 // 输入的是米：要变成：英尺
-                alt *= Const.M2FT;
+                alt *= MyCore.Utils.Const.M2FT;
 
                 if (geom == null)
                     geom = GetThermalRadiationGeometry(lon, lat, yield, alt, limits);
                 else
                     geom = geom.Union(GetThermalRadiationGeometry(lon, lat, yield, alt, limits));
             }
-            return new GeometryVO(Translate.Geometry2GeoJson(geom), limits, unit);
+            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), limits, unit);
 
         }
         #endregion
@@ -637,7 +634,7 @@ namespace SystemAPIApplication.Services
                 else
                     geom = geom.Union(GetNuclearPulseGeometry(lon, lat, yield, alt, limits));
             }
-            return new GeometryVO(Translate.Geometry2GeoJson(geom), limits, unit);
+            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), limits, unit);
 
         }
         public GeometryVO NuclearpulseMerge(string[] bo)
@@ -671,7 +668,7 @@ namespace SystemAPIApplication.Services
                 else
                     geom = geom.Union(GetNuclearPulseGeometry(lon, lat, yield, alt, limits));
             }
-            return new GeometryVO(Translate.Geometry2GeoJson(geom), limits, unit);
+            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), limits, unit);
 
         }
         #endregion
@@ -713,7 +710,7 @@ namespace SystemAPIApplication.Services
 
                     try
                     {
-                        Task<string> s = HttpCli.PostAsyncJson(url, postBody);
+                        Task<string> s = MyCore.Utils.HttpCli.PostAsyncJson(url, postBody);
                         s.Wait();
                         JObject jo = (JObject)Newtonsoft.Json.JsonConvert.DeserializeObject(s.Result);//或者JObject jo = JObject.Parse(jsonText);
 
@@ -727,7 +724,7 @@ namespace SystemAPIApplication.Services
 
                     Geometry geom = GetFalloutGeometry(lon, lat, yield, alt, wind_speed, wind_dir);
 
-                    multis.Add(new FalloutVO(id, Translate.Geometry2GeoJson(geom), 1,1, "rads/h"));
+                    multis.Add(new FalloutVO(id, MyCore.Utils.Translate.Geometry2GeoJson(geom), 1,1, "rads/h"));
                 }
 
             }
@@ -769,7 +766,7 @@ namespace SystemAPIApplication.Services
 
                     try
                     {
-                        Task<string> s = HttpCli.PostAsyncJson(url, postBody);
+                        Task<string> s = MyCore.Utils.HttpCli.PostAsyncJson(url, postBody);
                         s.Wait();
                         JObject jo = (JObject)Newtonsoft.Json.JsonConvert.DeserializeObject(s.Result);//或者JObject jo = JObject.Parse(jsonText);
 
@@ -783,7 +780,7 @@ namespace SystemAPIApplication.Services
 
                     Geometry geom = GetFalloutGeometry(lon, lat, yield, alt, wind_speed, wind_dir);
 
-                    multis.Add(new FalloutVO(id, Translate.Geometry2GeoJson(geom), 1,1, "rads/h"));
+                    multis.Add(new FalloutVO(id, MyCore.Utils.Translate.Geometry2GeoJson(geom), 1,1, "rads/h"));
 
                 }
             }
@@ -829,7 +826,7 @@ namespace SystemAPIApplication.Services
 
                     try
                     {
-                        Task<string> s = HttpCli.PostAsyncJson(url, postBody);
+                        Task<string> s = MyCore.Utils.HttpCli.PostAsyncJson(url, postBody);
                         s.Wait();
                         JObject jo = (JObject)Newtonsoft.Json.JsonConvert.DeserializeObject(s.Result);//或者JObject jo = JObject.Parse(jsonText);
 
@@ -848,7 +845,7 @@ namespace SystemAPIApplication.Services
 
                 }
             }
-            return new GeometryMergeVO(Translate.Geometry2GeoJson(geom), 1, 1, "rads/h");
+            return new GeometryMergeVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), 1, 1, "rads/h");
         }
         public GeometryMergeVO FalloutMerge(string[] bo)
         {
@@ -886,7 +883,7 @@ namespace SystemAPIApplication.Services
 
                     try
                     {
-                        Task<string> s = HttpCli.PostAsyncJson(url, postBody);
+                        Task<string> s = MyCore.Utils.HttpCli.PostAsyncJson(url, postBody);
                         s.Wait();
                         JObject jo = (JObject)Newtonsoft.Json.JsonConvert.DeserializeObject(s.Result);//或者JObject jo = JObject.Parse(jsonText);
 
@@ -905,7 +902,7 @@ namespace SystemAPIApplication.Services
 
                 }
             }
-            return new GeometryMergeVO(Translate.Geometry2GeoJson(geom), 1, 1, "rads/h");
+            return new GeometryMergeVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), 1, 1, "rads/h");
 
         }
         #endregion
@@ -950,16 +947,16 @@ namespace SystemAPIApplication.Services
                 string id = nuke.GetValue("NuclearExplosionID").AsString;
 
                 // 吨变千吨；米变英尺
-                double r = GetFireBallRadius(yield / 1000, alt * Const.M2FT);
+                double r = GetFireBallRadius(yield / 1000, alt * MyCore.Utils.Const.M2FT);
                 multiVOs_01.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, 0, ""));
 
-                r = GetNuclearRadiationRadius(yield / 1000, alt * Const.M2FT);
+                r = GetNuclearRadiationRadius(yield / 1000, alt * MyCore.Utils.Const.M2FT);
                 multiVOs_02.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, rem, "rem"));
 
-                r = GetShockWaveRadius(yield / 1000, alt * Const.M2FT, 99999);
+                r = GetShockWaveRadius(yield / 1000, alt * MyCore.Utils.Const.M2FT, 99999);
                 multiVOs_03.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, psi, "psi"));
 
-                r = GetNuclearRadiationRadius(yield / 1000, alt * Const.M2FT);
+                r = GetNuclearRadiationRadius(yield / 1000, alt * MyCore.Utils.Const.M2FT);
                 multiVOs_04.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, calcm, "cal/cm²"));
 
                 // 吨不变；米变千米
@@ -1016,16 +1013,16 @@ namespace SystemAPIApplication.Services
                 string id = nuke.GetValue("NuclearExplosionID").AsString;
 
                 // 吨变千吨；米变英尺
-                double r = GetFireBallRadius(yield / 1000, alt * Const.M2FT);
+                double r = GetFireBallRadius(yield / 1000, alt * MyCore.Utils.Const.M2FT);
                 multiVOs_01.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, 0, ""));
 
-                r = GetNuclearRadiationRadius(yield / 1000, alt * Const.M2FT);
+                r = GetNuclearRadiationRadius(yield / 1000, alt * MyCore.Utils.Const.M2FT);
                 multiVOs_02.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, rem, "rem"));
 
-                r = GetShockWaveRadius(yield / 1000, alt * Const.M2FT, 99999);
+                r = GetShockWaveRadius(yield / 1000, alt * MyCore.Utils.Const.M2FT, 99999);
                 multiVOs_03.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, psi, "psi"));
 
-                r = GetNuclearRadiationRadius(yield / 1000, alt * Const.M2FT);
+                r = GetNuclearRadiationRadius(yield / 1000, alt * MyCore.Utils.Const.M2FT);
                 multiVOs_04.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, calcm, "cal/cm²"));
 
                 // 吨不变；米变千米
@@ -1083,24 +1080,24 @@ namespace SystemAPIApplication.Services
 
                 // 吨变千吨；米变英尺
                 if (geom_01 == null)
-                    geom_01 = GetFireBallGeometry(lon, lat, yield / 1000, alt * Const.M2FT);
+                    geom_01 = GetFireBallGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT);
                 else
-                    geom_01 = geom_01.Union(GetFireBallGeometry(lon, lat, yield / 1000, alt * Const.M2FT));
+                    geom_01 = geom_01.Union(GetFireBallGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT));
 
                 if (geom_02 == null)
-                    geom_02 = GetNuclearRadiationGeometry(lon, lat, yield / 1000, alt * Const.M2FT, rem);
+                    geom_02 = GetNuclearRadiationGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, rem);
                 else
-                    geom_02 = geom_02.Union(GetNuclearRadiationGeometry(lon, lat, yield / 1000, alt * Const.M2FT, rem));
+                    geom_02 = geom_02.Union(GetNuclearRadiationGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, rem));
 
                 if (geom_03 == null)
-                    geom_03 = GetShockWaveGeometry(lon, lat, yield / 1000, alt * Const.M2FT, psi);
+                    geom_03 = GetShockWaveGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, psi);
                 else
-                    geom_03 = geom_03.Union(GetShockWaveGeometry(lon, lat, yield / 1000, alt * Const.M2FT, psi));
+                    geom_03 = geom_03.Union(GetShockWaveGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, psi));
 
                 if (geom_04 == null)
-                    geom_04 = GetThermalRadiationGeometry(lon, lat, yield / 1000, alt * Const.M2FT, calcm);
+                    geom_04 = GetThermalRadiationGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, calcm);
                 else
-                    geom_04 = geom_04.Union(GetThermalRadiationGeometry(lon, lat, yield / 1000, alt * Const.M2FT, calcm));
+                    geom_04 = geom_04.Union(GetThermalRadiationGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, calcm));
 
                 //吨不变，米变千米
                 if (geom_05 == null)
@@ -1110,11 +1107,11 @@ namespace SystemAPIApplication.Services
 
             }
 
-            damageMergeVOs.Add(new DamageMergeVO("H火球", Translate.Geometry2GeoJson(geom_01), 0, ""));
-            damageMergeVOs.Add(new DamageMergeVO("核辐射", Translate.Geometry2GeoJson(geom_02), rem, "rem"));
-            damageMergeVOs.Add(new DamageMergeVO("冲击波", Translate.Geometry2GeoJson(geom_03), psi, "psi"));
-            damageMergeVOs.Add(new DamageMergeVO("热/光辐射", Translate.Geometry2GeoJson(geom_04), calcm, "cal/cm²"));
-            damageMergeVOs.Add(new DamageMergeVO("电磁脉冲", Translate.Geometry2GeoJson(geom_05), vm, "v/m"));
+            damageMergeVOs.Add(new DamageMergeVO("H火球", MyCore.Utils.Translate.Geometry2GeoJson(geom_01), 0, ""));
+            damageMergeVOs.Add(new DamageMergeVO("核辐射", MyCore.Utils.Translate.Geometry2GeoJson(geom_02), rem, "rem"));
+            damageMergeVOs.Add(new DamageMergeVO("冲击波", MyCore.Utils.Translate.Geometry2GeoJson(geom_03), psi, "psi"));
+            damageMergeVOs.Add(new DamageMergeVO("热/光辐射", MyCore.Utils.Translate.Geometry2GeoJson(geom_04), calcm, "cal/cm²"));
+            damageMergeVOs.Add(new DamageMergeVO("电磁脉冲", MyCore.Utils.Translate.Geometry2GeoJson(geom_05), vm, "v/m"));
 
             return damageMergeVOs;
         }
@@ -1157,24 +1154,24 @@ namespace SystemAPIApplication.Services
 
                 // 吨变千吨；米变英尺
                 if (geom_01 == null)
-                    geom_01 = GetFireBallGeometry(lon, lat, yield / 1000, alt * Const.M2FT);
+                    geom_01 = GetFireBallGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT);
                 else
-                    geom_01 = geom_01.Union(GetFireBallGeometry(lon, lat, yield / 1000, alt * Const.M2FT));
+                    geom_01 = geom_01.Union(GetFireBallGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT));
 
                 if (geom_02 == null)
-                    geom_02 = GetNuclearRadiationGeometry(lon, lat, yield / 1000, alt * Const.M2FT, rem);
+                    geom_02 = GetNuclearRadiationGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, rem);
                 else
-                    geom_02 = geom_02.Union(GetNuclearRadiationGeometry(lon, lat, yield / 1000, alt * Const.M2FT, rem));
+                    geom_02 = geom_02.Union(GetNuclearRadiationGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, rem));
 
                 if (geom_03 == null)
-                    geom_03 = GetShockWaveGeometry(lon, lat, yield / 1000, alt * Const.M2FT, psi);
+                    geom_03 = GetShockWaveGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, psi);
                 else
-                    geom_03 = geom_03.Union(GetShockWaveGeometry(lon, lat, yield / 1000, alt * Const.M2FT, psi));
+                    geom_03 = geom_03.Union(GetShockWaveGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, psi));
 
                 if (geom_04 == null)
-                    geom_04 = GetThermalRadiationGeometry(lon, lat, yield / 1000, alt * Const.M2FT, calcm);
+                    geom_04 = GetThermalRadiationGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, calcm);
                 else
-                    geom_04 = geom_04.Union(GetThermalRadiationGeometry(lon, lat, yield / 1000, alt * Const.M2FT, calcm));
+                    geom_04 = geom_04.Union(GetThermalRadiationGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, calcm));
 
                 //吨不变，米变千米
                 if (geom_05 == null)
@@ -1184,11 +1181,11 @@ namespace SystemAPIApplication.Services
 
             }
 
-            damageMergeVOs.Add(new DamageMergeVO("H火球", Translate.Geometry2GeoJson(geom_01), 0, ""));
-            damageMergeVOs.Add(new DamageMergeVO("核辐射", Translate.Geometry2GeoJson(geom_02), rem, "rem"));
-            damageMergeVOs.Add(new DamageMergeVO("冲击波", Translate.Geometry2GeoJson(geom_03), psi, "psi"));
-            damageMergeVOs.Add(new DamageMergeVO("热/光辐射", Translate.Geometry2GeoJson(geom_04), calcm, "cal/cm²"));
-            damageMergeVOs.Add(new DamageMergeVO("电磁脉冲", Translate.Geometry2GeoJson(geom_05), vm, "v/m"));
+            damageMergeVOs.Add(new DamageMergeVO("H火球", MyCore.Utils.Translate.Geometry2GeoJson(geom_01), 0, ""));
+            damageMergeVOs.Add(new DamageMergeVO("核辐射", MyCore.Utils.Translate.Geometry2GeoJson(geom_02), rem, "rem"));
+            damageMergeVOs.Add(new DamageMergeVO("冲击波", MyCore.Utils.Translate.Geometry2GeoJson(geom_03), psi, "psi"));
+            damageMergeVOs.Add(new DamageMergeVO("热/光辐射", MyCore.Utils.Translate.Geometry2GeoJson(geom_04), calcm, "cal/cm²"));
+            damageMergeVOs.Add(new DamageMergeVO("电磁脉冲", MyCore.Utils.Translate.Geometry2GeoJson(geom_05), vm, "v/m"));
 
             return damageMergeVOs;
         }
@@ -1201,17 +1198,17 @@ namespace SystemAPIApplication.Services
          */
         private Geometry GetFireBallGeometry(double lon, double lat, double yield, double alt)
         {
-            MyAnalyse myAnalyse = new MyAnalyse();
+            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
             double r =  myAnalyse.CalcfireBallRadius(yield, alt > 0);
 
-            Geometry geom = Translate.BuildCircle(lon, lat, r / 1000.0, 50);
+            Geometry geom = MyCore.Utils.Translate.BuildCircle(lon, lat, r / 1000.0, 50);
 
 
             return geom;
         }
         private double GetFireBallRadius(double yield, double alt)
         {
-            MyAnalyse myAnalyse = new MyAnalyse();
+            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
             return myAnalyse.CalcfireBallRadius(yield, alt > 0);
         }
 
@@ -1222,12 +1219,12 @@ namespace SystemAPIApplication.Services
 
         private Geometry GetNuclearRadiationGeometry(double lon, double lat, double yield, double alt,double limits)
         {
-            MyAnalyse myAnalyse = new MyAnalyse();
+            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
 
             double r = myAnalyse.CalcNuclearRadiationRadius(yield, alt, limits);
 
             //根据(lng,lat,R)生成Geometry
-            Geometry geom = Translate.BuildCircle(lon, lat, r / 1000.0, 50);
+            Geometry geom = MyCore.Utils.Translate.BuildCircle(lon, lat, r / 1000.0, 50);
 
             return geom;
         }
@@ -1240,7 +1237,7 @@ namespace SystemAPIApplication.Services
             if (rule != null)
                 limits = rule.limits;
 
-            MyAnalyse myAnalyse = new MyAnalyse();
+            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
             return myAnalyse.CalcNuclearRadiationRadius(yield, alt, limits);
         }
 
@@ -1250,19 +1247,19 @@ namespace SystemAPIApplication.Services
         private Geometry GetShockWaveGeometry(double lon, double lat, double yield, double alt,double limits)
         {
 
-            MyAnalyse myAnalyse = new MyAnalyse();
+            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
 
             // 求核爆影响范围半径[54609,21249,10101,3734,1537]
             double r = myAnalyse.CalcShockWaveRadius(yield, alt, limits);
 
             //根据(lng,lat,R)生成Geometry
-            Geometry geom = Translate.BuildCircle(lon, lat, r / 1000.0, 50);
+            Geometry geom = MyCore.Utils.Translate.BuildCircle(lon, lat, r / 1000.0, 50);
             return geom;
         }
 
         private double GetShockWaveRadius(double yield, double alt,double limits)
         {
-            MyAnalyse myAnalyse = new MyAnalyse();
+            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
             return myAnalyse.CalcShockWaveRadius(yield,alt, limits);
         }
 
@@ -1272,18 +1269,18 @@ namespace SystemAPIApplication.Services
         private Geometry GetThermalRadiationGeometry(double lon, double lat, double yield, double alt,double limits)
         {
 
-            MyAnalyse myAnalyse = new MyAnalyse();
+            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
 
             double r = myAnalyse.GetThermalRadiationR(yield, lat, limits);
 
             //根据(lng,lat,R)生成Geometry
-            Geometry geom = Translate.BuildCircle(lon, lat, r / 1000.0, 50);
+            Geometry geom = MyCore.Utils.Translate.BuildCircle(lon, lat, r / 1000.0, 50);
 
             return geom;
         }
         private double GetThermalRadiationRadius(double yield, double alt,double limits)
         {
-            MyAnalyse myAnalyse = new MyAnalyse();
+            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
             return myAnalyse.GetThermalRadiationR(yield, alt, limits);
         }
 
@@ -1292,18 +1289,18 @@ namespace SystemAPIApplication.Services
         */
         private Geometry GetNuclearPulseGeometry(double lon, double lat, double yield, double alt,double limits)
         {
-            MyAnalyse myAnalyse = new MyAnalyse();
+            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
 
             double r = myAnalyse.CalcNuclearPulseRadius(yield, alt, limits);
 
             //根据(lng,lat,R)生成Geometry。
             // 注意，因为r返回的就是千米，而BuildCircle，需要传入的也是千米，所以就不用除以1000了
-            Geometry geom = Translate.BuildCircle(lon, lat, r, 50);
+            Geometry geom = MyCore.Utils.Translate.BuildCircle(lon, lat, r, 50);
             return geom;
         }
         private double GetNuclearPulseRadius(double yield, double alt,double limits)
         {
-            MyAnalyse myAnalyse = new MyAnalyse();
+            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
             return myAnalyse.CalcNuclearPulseRadius(yield, alt, limits);
         }
 
@@ -1312,11 +1309,11 @@ namespace SystemAPIApplication.Services
          */
         private Geometry GetFalloutGeometry(double lon, double lat, double yield, double alt, double wind_speed, double wind_dir)
         {
-            MyAnalyse myAnalyse = new MyAnalyse();
+            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
             double maximumDownwindDistance = 0;
             double maximumWidth = 0;
-            List<Coor> coors = myAnalyse.CalcRadioactiveFalloutRegion(
-                lon, lat, alt, yield, wind_speed, wind_dir, DamageEnumeration.Light,
+            List<MyCore.Coor> coors = myAnalyse.CalcRadioactiveFalloutRegion(
+                lon, lat, alt, yield, wind_speed, wind_dir, MyCore.enums.DamageEnumeration.Light,
                 ref maximumDownwindDistance, ref maximumWidth);
 
             List<Coordinate> coordinates = new List<Coordinate>();

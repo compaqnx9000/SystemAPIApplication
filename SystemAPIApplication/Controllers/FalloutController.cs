@@ -11,7 +11,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using SystemAPIApplication.bo;
 using SystemAPIApplication.Services;
-using SystemAPIApplication.Utils;
 using SystemAPIApplication.vo;
 
 namespace SystemAPIApplication.Controllers
