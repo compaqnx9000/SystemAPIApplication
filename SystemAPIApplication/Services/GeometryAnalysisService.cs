@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Options;
 using MongoDB.Bson;
-//using MyCore;
 using NetTopologySuite.Geometries;
 using Newtonsoft.Json.Linq;
 using System;
@@ -24,238 +23,116 @@ namespace SystemAPIApplication.Services
 
         public List<MultiVO> FireballMulti()
         {
-            // 读取mongo数据库中HB库，用于仿真模拟
+            // 读取mongo数据库中HB库中的hbmock表，用于仿真模拟
             List<MultiVO> multis = new List<MultiVO>();
 
-            List<BsonDocument> result = _mongoService.QueryAll();
-            foreach (BsonDocument fireball in result)
+            List<MockBO> bos = _mongoService.QueryMockAll();
+            foreach (MockBO bo in bos)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-                string id = fireball.GetValue("NuclearExplosionID").AsString;
-
-                // 传入的是吨，要变成千吨;输入的是米：要变成：英尺
-
-                double r = GetFireBallRadius(yield/1000, alt* MyCore.Utils.Const.M2FT);
-
-                multis.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, 0, ""));
+                double r = MyCore.NuclearAlgorithm.GetFireBallRadius(bo.Yield, bo.Alt);
+                multis.Add(new MultiVO(bo.NuclearExplosionID, Math.Round(r, 2), bo.Lon, bo.Lat, bo.Alt, 0, ""));
             }
             return multis;
         }
         public List<MultiVO> FireballMulti(string[] bo)
         {
-            // 读取mongo数据库中HB库，用于仿真模拟
             List<MultiVO> multis = new List<MultiVO>();
 
-            List<BsonDocument> result = _mongoService.Query(bo);
-            foreach (BsonDocument fireball in result)
+            List<MockBO> bos = _mongoService.QueryMock(bo);
+            foreach (var b in bos)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-                string id = fireball.GetValue("NuclearExplosionID").AsString;
-
-                // 传入的是吨，要变成千吨;输入的是米：要变成：英尺
-
-                double r = GetFireBallRadius(yield/1000, alt * MyCore.Utils.Const.M2FT);
-
-                multis.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, 0, ""));
+                double r = MyCore.NuclearAlgorithm.GetFireBallRadius(b.Yield, b.Alt);
+                multis.Add(new MultiVO(b.NuclearExplosionID, Math.Round(r, 2), b.Lon, b.Lat, b.Alt, 0, ""));
             }
             return multis;
         }
         public GeometryVO FireballMerge()
         {
-            // 读取mongo数据库中HB库，用于仿真模拟
             Geometry geom = null;
-            List<BsonDocument> result = _mongoService.QueryAll();
-            foreach (BsonDocument fireball in result)
+            List<MockBO> bos = _mongoService.QueryMockAll();
+            foreach (MockBO bo in bos)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-
-                // 传入的是吨，要变成千吨
-                yield /= 1000;
-
-                // 输入的是米：要变成：英尺
-                alt *= 3.2808399;
-
                 if (geom == null)
-                    geom = GetFireBallGeometry(lon, lat, yield, alt);
+                    geom = MyCore.NuclearAlgorithm.GetFireBallGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt);
                 else
-                    geom = geom.Union(GetFireBallGeometry(lon, lat, yield, alt));
+                    geom = geom.Union(MyCore.NuclearAlgorithm.GetFireBallGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt));
             }
             return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), 0, "");
 
         }
         public GeometryVO FireballMerge(string[] bo)
         {
-            // 读取mongo数据库中HB库，用于仿真模拟
             Geometry geom = null;
-            List<BsonDocument> result = _mongoService.Query(bo);
-            foreach (BsonDocument fireball in result)
+            List<MockBO> result = _mongoService.QueryMock(bo);
+            foreach (var b in result)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-
-                // 传入的是吨，要变成千吨
-                yield /= 1000;
-
-                // 输入的是米：要变成：英尺
-                alt *= 3.2808399;
-
                 if (geom == null)
-                    geom = GetFireBallGeometry(lon, lat, yield, alt);
+                    geom = MyCore.NuclearAlgorithm.GetFireBallGeometry(b.Lon, b.Lat, b.Yield, b.Alt);
                 else
-                    geom = geom.Union(GetFireBallGeometry(lon, lat, yield, alt));
+                    geom = geom.Union(MyCore.NuclearAlgorithm.GetFireBallGeometry(b.Lon, b.Lat, b.Yield, b.Alt));
             }
-
             return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), 0, "");
         }
 
         #region 早期核辐射
         public List<MultiVO> NuclearradiationMulti()
         {
-            // 读取mongo数据库中HB库，用于仿真模拟
+            var rule = QueryLimits("早期核辐射");
+
             List<MultiVO> multis = new List<MultiVO>();
 
-            List<BsonDocument> result = _mongoService.QueryAll();
-            foreach (BsonDocument fireball in result)
+            List<MockBO> bos = _mongoService.QueryMockAll();
+            foreach (var bo in bos)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-                string id = fireball.GetValue("NuclearExplosionID").AsString;
-
-                // 传入的是吨，要变成千吨;输入的是米：要变成：英尺
-
-                double limits = 100;
-                string unit = "REM";
-                var rule = _mongoService.QueryRule("早期核辐射");
-                if (rule != null)
-                {
-                    unit = rule.unit;
-                    limits = rule.limits;
-                }
-
-                MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
-                double r = myAnalyse.CalcNuclearRadiationRadius(yield / 1000, alt * MyCore.Utils.Const.M2FT, limits);
-
-                // 返回值的alt单位是：米
-                multis.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, limits, unit));
+                double r = MyCore.NuclearAlgorithm.GetNuclearRadiationRadius(bo.Yield, bo.Alt, rule.limit);
+                multis.Add(new MultiVO(bo.NuclearExplosionID, Math.Round(r, 2), bo.Lon, bo.Lat, bo.Alt, rule.limit, rule.unit));
             }
             return multis;
         }
         public List<MultiVO> NuclearradiationMulti(string[] bo)
         {
-            // 读取mongo数据库中HB库，用于仿真模拟
+            var rule = QueryLimits("早期核辐射");
+
             List<MultiVO> multis = new List<MultiVO>();
 
-            List<BsonDocument> result = _mongoService.Query(bo);
-            foreach (BsonDocument fireball in result)
+            List<MockBO> result = _mongoService.QueryMock(bo);
+            foreach (var b in result)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-                string id = fireball.GetValue("NuclearExplosionID").AsString;
-
-                // 传入的是吨，要变成千吨;输入的是米：要变成：英尺
-
-                double limits = 100;
-                string unit = "REM";
-                var rule = _mongoService.QueryRule("早期核辐射");
-                if (rule != null)
-                {
-                    unit = rule.unit;
-                    limits = rule.limits;
-                }
-
-                MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
-                double r = myAnalyse.CalcNuclearRadiationRadius(yield / 1000, alt * MyCore.Utils.Const.M2FT, limits);
-
-                // 返回值的alt单位是：米
-                multis.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, limits, unit));
+                double r = MyCore.NuclearAlgorithm.GetNuclearRadiationRadius(b.Yield, b.Alt, rule.limit);
+                multis.Add(new MultiVO(b.NuclearExplosionID, Math.Round(r, 2), b.Lon, b.Lat, b.Alt, rule.limit, rule.unit));
             }
             return multis;
         }
         public GeometryVO NuclearradiationMerge()
         {
-            double limits = 100;
-            string unit = "REM"; 
-            
-            var rule = _mongoService.QueryRule("早期核辐射");
-            if (rule != null)
-            {
-                unit = rule.unit;
-                limits = rule.limits;
-            }
+            var rule = QueryLimits("早期核辐射");
 
-            // 读取mongo数据库中HB库，用于仿真模拟
             Geometry geom = null;
-            List<BsonDocument> result = _mongoService.QueryAll();
-            foreach (BsonDocument fireball in result)
+            List<MockBO> bos = _mongoService.QueryMockAll();
+            foreach (var bo in bos)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-
-                // 传入的是吨，要变成千吨
-                yield /= 1000;
-
-                // 输入的是米：要变成：英尺
-                alt *= 3.2808399;
-
                 if (geom == null)
-                    geom = GetNuclearRadiationGeometry(lon, lat, yield, alt,limits);
+                    geom = MyCore.NuclearAlgorithm.GetNuclearRadiationGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt,rule.limit);
                 else
-                    geom = geom.Union(GetNuclearRadiationGeometry(lon, lat, yield, alt, limits));
+                    geom = geom.Union(MyCore.NuclearAlgorithm.GetNuclearRadiationGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt, rule.limit));
             }
-            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), limits, unit);
+            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), rule.limit, rule.unit);
 
         }
         public GeometryVO NuclearradiationMerge(string[] bo)
         {
-            double limits = 100;
-            string unit = "REM";
+            var rule = QueryLimits("早期核辐射");
 
-            var rule = _mongoService.QueryRule("早期核辐射");
-            if (rule != null)
-            {
-                unit = rule.unit;
-                limits = rule.limits;
-            }
-
-            // 读取mongo数据库中HB库，用于仿真模拟
             Geometry geom = null;
-            List<BsonDocument> result = _mongoService.Query(bo);
-            foreach (BsonDocument fireball in result)
+            List<MockBO> result = _mongoService.QueryMock(bo);
+            foreach (var b in result)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-
-                // 传入的是吨，要变成千吨
-                yield /= 1000;
-
-                // 输入的是米：要变成：英尺
-                alt *= 3.2808399;
-
                 if (geom == null)
-                    geom = GetNuclearRadiationGeometry(lon, lat, yield, alt, limits);
+                    geom = MyCore.NuclearAlgorithm.GetNuclearRadiationGeometry(b.Lon, b.Lat, b.Yield, b.Alt, rule.limit);
                 else
-                    geom = geom.Union(GetNuclearRadiationGeometry(lon, lat, yield, alt, limits));
+                    geom = geom.Union(MyCore.NuclearAlgorithm.GetNuclearRadiationGeometry(b.Lon, b.Lat, b.Yield, b.Alt, rule.limit));
             }
-            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), limits, unit);
+            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), rule.limit, rule.unit);
 
         }
 
@@ -264,136 +141,64 @@ namespace SystemAPIApplication.Services
         #region 冲击波
         public List<MultiVO> AirblastMulti()
         {
-            double limits = 1;
-            string unit = "PSI";
+            var rule = QueryLimits("冲击波");
 
-            var rule = _mongoService.QueryRule("冲击波");
-            if (rule != null)
-            {
-                unit = rule.unit;
-                limits = rule.limits;
-            }
-            // 读取mongo数据库中HB库，用于仿真模拟
             List<MultiVO> multis = new List<MultiVO>();
 
-            List<BsonDocument> result = _mongoService.QueryAll();
-            foreach (BsonDocument fireball in result)
+            List<MockBO> bos = _mongoService.QueryMockAll();
+            foreach (var bo in bos)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-                string id = fireball.GetValue("NuclearExplosionID").AsString;
-
-                // 传入的是吨，要变成千吨;输入的是米：要变成：英尺
-                double r = GetShockWaveRadius(yield / 1000, alt * 3.2808399, limits);
-
-                // 返回值的alt单位是：米
-                multis.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, limits, unit));
+                double r = MyCore.NuclearAlgorithm.GetShockWaveRadius(bo.Yield, bo.Alt, rule.limit);
+                multis.Add(new MultiVO(bo.NuclearExplosionID, Math.Round(r, 2), bo.Lon, bo.Lat, bo.Alt, rule.limit, rule.unit));
             }
 
             return multis;
         }
         public List<MultiVO> AirblastMulti(string[] bo)
         {
-            double limits = 1;
-            string unit = "PSI";
+            var rule = QueryLimits("冲击波");
 
-            var rule = _mongoService.QueryRule("冲击波");
-            if (rule != null)
-            {
-                unit = rule.unit;
-                limits = rule.limits;
-            }
-            // 读取mongo数据库中HB库，用于仿真模拟
             List<MultiVO> multis = new List<MultiVO>();
 
-            List<BsonDocument> result = _mongoService.Query(bo);
-            foreach (BsonDocument fireball in result)
+            List<MockBO> result = _mongoService.QueryMock(bo);
+            foreach (var b in result)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-                string id = fireball.GetValue("NuclearExplosionID").AsString;
-
-                // 传入的是吨，要变成千吨;输入的是米：要变成：英尺
-                double r = GetShockWaveRadius(yield / 1000, alt * 3.2808399, limits);
-
-                // 返回值的alt单位是：米
-                multis.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, limits, unit));
+                double r = MyCore.NuclearAlgorithm.GetShockWaveRadius(b.Yield, b.Alt, rule.limit);
+                multis.Add(new MultiVO(b.NuclearExplosionID, Math.Round(r, 2), b.Lon, b.Lat, b.Alt, rule.limit, rule.unit));
             }
             return multis;
 
         }
         public GeometryVO AirblastMerge()
         {
-            double limits = 1;
-            string unit = "PSI";
+            var rule = QueryLimits("冲击波");
 
-            var rule = _mongoService.QueryRule("冲击波");
-            if (rule != null)
-            {
-                unit = rule.unit;
-                limits = rule.limits;
-            }
-            // 读取mongo数据库中HB库，用于仿真模拟
             Geometry geom = null;
-            List<BsonDocument> result = _mongoService.QueryAll();
-            foreach (BsonDocument fireball in result)
+            List<MockBO> bos = _mongoService.QueryMockAll();
+            foreach (var bo in bos)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-
-                // 传入的是吨，要变成千吨
-                yield /= 1000;
-
-                // 输入的是米：要变成：英尺
-                alt *= 3.2808399;
-
                 if (geom == null)
-                    geom = GetShockWaveGeometry(lon, lat, yield, alt, limits);
+                    geom = MyCore.NuclearAlgorithm.GetShockWaveGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt, rule.limit);
                 else
-                    geom = geom.Union(GetShockWaveGeometry(lon, lat, yield, alt, limits));
+                    geom = geom.Union(MyCore.NuclearAlgorithm.GetShockWaveGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt, rule.limit));
             }
-            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), limits, unit);
+            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), rule.limit, rule.unit);
 
         }
         public GeometryVO AirblastMerge(string[] bo)
         {
-            double limits = 1;
-            string unit = "PSI";
+            var rule = QueryLimits("冲击波");
 
-            var rule = _mongoService.QueryRule("冲击波");
-            if (rule != null)
-            {
-                unit = rule.unit;
-                limits = rule.limits;
-            }
-            // 读取mongo数据库中HB库，用于仿真模拟
             Geometry geom = null;
-            List<BsonDocument> result = _mongoService.Query(bo);
-            foreach (BsonDocument fireball in result)
+            List<MockBO> result = _mongoService.QueryMock(bo);
+            foreach (var b in result)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-
-                // 传入的是吨，要变成千吨
-                yield /= 1000;
-
-                // 输入的是米：要变成：英尺
-                alt *= 3.2808399;
-
                 if (geom == null)
-                    geom = GetShockWaveGeometry(lon, lat, yield, alt,limits);
+                    geom = MyCore.NuclearAlgorithm.GetShockWaveGeometry(b.Lon, b.Lat, b.Yield, b.Alt, rule.limit);
                 else
-                    geom = geom.Union(GetShockWaveGeometry(lon, lat, yield, alt, limits));
+                    geom = geom.Union(MyCore.NuclearAlgorithm.GetShockWaveGeometry(b.Lon, b.Lat, b.Yield, b.Alt, rule.limit));
             }
-            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), limits, unit);
+            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), rule.limit, rule.unit);
 
         }
         #endregion
@@ -401,138 +206,63 @@ namespace SystemAPIApplication.Services
         #region 光辐射
         public List<MultiVO> ThermalradiationMulti()
         {
-            double limits = 1.9;
-            string unit = "CAL/CM²";
+            var rule = QueryLimits("光辐射");
 
-            var rule = _mongoService.QueryRule("光辐射");
-            if (rule != null)
-            {
-                unit = rule.unit;
-                limits = rule.limits;
-            }
-            // 读取mongo数据库中HB库，用于仿真模拟
             List<MultiVO> multis = new List<MultiVO>();
 
-            List<BsonDocument> result = _mongoService.QueryAll();
-            foreach (BsonDocument fireball in result)
+            List<MockBO> bos = _mongoService.QueryMockAll();
+            foreach (var bo in bos)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-                string id = fireball.GetValue("NuclearExplosionID").AsString;
-
-                // 传入的是吨，要变成千吨;输入的是米：要变成：英尺
-                double r = GetThermalRadiationRadius(yield / 1000, alt * MyCore.Utils.Const.M2FT, limits);
-
-                // 返回值的alt单位是：米
-                multis.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, limits, unit));
+                double r = MyCore.NuclearAlgorithm.GetThermalRadiationRadius(bo.Yield, bo.Alt, rule.limit);
+                multis.Add(new MultiVO(bo.NuclearExplosionID, Math.Round(r, 2), bo.Lon, bo.Lat, bo.Alt, rule.limit, rule.unit));
             }
             return multis;
         }
         public List<MultiVO> ThermalradiationMulti(string[] bo)
         {
-            double limits = 1.9;
-            string unit = "CAL/CM²";
+            var rule = QueryLimits("光辐射");
 
-            var rule = _mongoService.QueryRule("光辐射");
-            if (rule != null)
-            {
-                unit = rule.unit;
-                limits = rule.limits;
-            }
-            // 读取mongo数据库中HB库，用于仿真模拟
             List<MultiVO> multis = new List<MultiVO>();
 
-            List<BsonDocument> result = _mongoService.Query(bo);
-            foreach (BsonDocument fireball in result)
+            List<MockBO> result = _mongoService.QueryMock(bo);
+            foreach (var b in result)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-
-
-
-                string id = fireball.GetValue("NuclearExplosionID").AsString;
-
-                // 传入的是吨，要变成千吨;输入的是米：要变成：英尺
-                double r = GetThermalRadiationRadius(yield / 1000, alt * 3.2808399, limits);
-
-                // 返回值的alt单位是：米
-                multis.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, limits, unit));
+                double r = MyCore.NuclearAlgorithm.GetThermalRadiationRadius(b.Yield, b.Alt, rule.limit);
+                multis.Add(new MultiVO(b.NuclearExplosionID, Math.Round(r, 2), b.Lon, b.Lat, b.Alt, rule.limit, rule.unit));
             }
             return multis;
 
         }
         public GeometryVO ThermalradiationMerge()
         {
-            double limits = 1.9;
-            string unit = "CAL/CM²";
+            var rule = QueryLimits("光辐射");
 
-            var rule = _mongoService.QueryRule("光辐射");
-            if (rule != null)
-            {
-                unit = rule.unit;
-                limits = rule.limits;
-            }
-            // 读取mongo数据库中HB库，用于仿真模拟
             Geometry geom = null;
-            List<BsonDocument> result = _mongoService.QueryAll();
-            foreach (BsonDocument fireball in result)
+            List<MockBO> bos = _mongoService.QueryMockAll();
+            foreach (var bo in bos)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-
-                // 传入的是吨，要变成千吨
-                yield /= 1000;
-
-                // 输入的是米：要变成：英尺
-                alt *= 3.2808399;
-
                 if (geom == null)
-                    geom = GetThermalRadiationGeometry(lon, lat, yield, alt, limits);
+                    geom = MyCore.NuclearAlgorithm.GetThermalRadiationGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt, rule.limit);
                 else
-                    geom = geom.Union(GetThermalRadiationGeometry(lon, lat, yield, alt, limits));
+                    geom = geom.Union(MyCore.NuclearAlgorithm.GetThermalRadiationGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt, rule.limit));
             }
-            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), limits, unit);
+            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), rule.limit, rule.unit);
 
         }
         public GeometryVO ThermalradiationMerge(string[] bo)
         {
-            double limits = 1.9;
-            string unit = "CAL/CM²";
+            var rule = QueryLimits("光辐射");
 
-            var rule = _mongoService.QueryRule("光辐射");
-            if (rule != null)
-            {
-                unit = rule.unit;
-                limits = rule.limits;
-            }
-            // 读取mongo数据库中HB库，用于仿真模拟
             Geometry geom = null;
-            List<BsonDocument> result = _mongoService.Query(bo);
-            foreach (BsonDocument fireball in result)
+            List<MockBO> result = _mongoService.QueryMock(bo);
+            foreach (var b in result)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-
-                // 传入的是吨，要变成千吨
-                yield /= 1000;
-
-                // 输入的是米：要变成：英尺
-                alt *= MyCore.Utils.Const.M2FT;
-
                 if (geom == null)
-                    geom = GetThermalRadiationGeometry(lon, lat, yield, alt, limits);
+                    geom = MyCore.NuclearAlgorithm.GetThermalRadiationGeometry(b.Lon, b.Lat, b.Yield, b.Alt, rule.limit);
                 else
-                    geom = geom.Union(GetThermalRadiationGeometry(lon, lat, yield, alt, limits));
+                    geom = geom.Union(MyCore.NuclearAlgorithm.GetThermalRadiationGeometry(b.Lon, b.Lat, b.Yield, b.Alt, rule.limit));
             }
-            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), limits, unit);
+            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), rule.limit, rule.unit);
 
         }
         #endregion
@@ -540,135 +270,63 @@ namespace SystemAPIApplication.Services
         #region 核电磁脉冲
         public List<MultiVO> NuclearpulseMulti()
         {
-            double limits = 200;
-            string unit = "V/M";
+            var rule = QueryLimits("核电磁脉冲");
 
-            var rule = _mongoService.QueryRule("核电磁脉冲");
-            if (rule != null)
-            {
-                unit = rule.unit;
-                limits = rule.limits;
-            }
-            // 读取mongo数据库中HB库，用于仿真模拟
             List<MultiVO> multis = new List<MultiVO>();
 
-            List<BsonDocument> result = _mongoService.QueryAll();
-            foreach (BsonDocument fireball in result)
+            List<MockBO> bos = _mongoService.QueryMockAll();
+            foreach (var bo in bos)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-                string id = fireball.GetValue("NuclearExplosionID").AsString;
-
-
-
-                // 核电磁脉冲的当量就是“吨”，这里就不需要变成“千吨”了,但是高度要变成km
-                double r = GetNuclearPulseRadius(yield, alt / 1000.0, limits);
-
-                // 返回值的alt单位是：米,所以要把 r 乘以 1000
-                multis.Add(new MultiVO(id, Math.Round(r * 1000, 2), lon, lat, alt, limits, unit));
+                double r = MyCore.NuclearAlgorithm.GetNuclearPulseRadius(bo.Yield, bo.Alt, rule.limit);
+                multis.Add(new MultiVO(bo.NuclearExplosionID, Math.Round(r, 2), bo.Lon, bo.Lat, bo.Alt, rule.limit, rule.unit));
             }
             return multis;
         }
         public List<MultiVO> NuclearpulseMulti(string[] bo)
         {
-            double limits = 200;
-            string unit = "V/M";
+            var rule = QueryLimits("核电磁脉冲");
 
-            var rule = _mongoService.QueryRule("核电磁脉冲");
-            if (rule != null)
-            {
-                unit = rule.unit;
-                limits = rule.limits;
-            }
-            // 读取mongo数据库中HB库，用于仿真模拟
             List<MultiVO> multis = new List<MultiVO>();
 
-            List<BsonDocument> result = _mongoService.Query(bo);
-            foreach (BsonDocument fireball in result)
+            List<MockBO> result = _mongoService.QueryMock(bo);
+            foreach (var b in result)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-                string id = fireball.GetValue("NuclearExplosionID").AsString;
-
-                // 核电磁脉冲的当量就是“吨”，这里就不需要变成“千吨”了,但是高度要变成km
-                double r = GetNuclearPulseRadius(yield, alt / 1000.0, limits);
-
-                // 返回值的alt单位是：米,所以要把 r 乘以 1000
-                multis.Add(new MultiVO(id, Math.Round(r * 1000, 2), lon, lat, alt, limits, unit));
+                double r = MyCore.NuclearAlgorithm.GetNuclearPulseRadius(b.Yield, b.Alt, rule.limit);
+                multis.Add(new MultiVO(b.NuclearExplosionID, Math.Round(r , 2), b.Lon, b.Lat, b.Alt, rule.limit, rule.unit));
             }
             return multis;
 
         }
         public GeometryVO NuclearpulseMerge()
         {
-            double limits = 200;
-            string unit = "V/M";
+            var rule = QueryLimits("核电磁脉冲");
 
-            var rule = _mongoService.QueryRule("核电磁脉冲");
-            if (rule != null)
-            {
-                unit = rule.unit;
-                limits = rule.limits;
-            }
-            // 读取mongo数据库中HB库，用于仿真模拟
             Geometry geom = null;
-            List<BsonDocument> result = _mongoService.QueryAll();
-            foreach (BsonDocument fireball in result)
+            List<MockBO> bos = _mongoService.QueryMockAll();
+            foreach (var bo in bos)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-
-                // 核电磁脉冲的当量就是“吨”，这里就不需要变成“千吨”了
-
-                // 爆高需要传入km，所以要除以1000.
-                alt /= 1000;
-
                 if (geom == null)
-                    geom = GetNuclearPulseGeometry(lon, lat, yield, alt, limits);
+                    geom = MyCore.NuclearAlgorithm.GetNuclearPulseGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt, rule.limit);
                 else
-                    geom = geom.Union(GetNuclearPulseGeometry(lon, lat, yield, alt, limits));
+                    geom = geom.Union(MyCore.NuclearAlgorithm.GetNuclearPulseGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt, rule.limit));
             }
-            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), limits, unit);
+            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), rule.limit, rule.unit);
 
         }
         public GeometryVO NuclearpulseMerge(string[] bo)
         {
-            double limits = 200;
-            string unit = "V/M";
+            var rule = QueryLimits("核电磁脉冲");
 
-            var rule = _mongoService.QueryRule("核电磁脉冲");
-            if (rule != null)
-            {
-                unit = rule.unit;
-                limits = rule.limits;
-            }
-            // 读取mongo数据库中HB库，用于仿真模拟
             Geometry geom = null;
-            List<BsonDocument> result = _mongoService.Query(bo);
-            foreach (BsonDocument fireball in result)
+            List<MockBO> result = _mongoService.QueryMock(bo);
+            foreach (var b in result)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-
-                // 核电磁脉冲的当量就是“吨”，这里就不需要变成“千吨”了
-
-                // 爆高需要传入km，所以要除以1000.
-                alt /= 1000;
-
                 if (geom == null)
-                    geom = GetNuclearPulseGeometry(lon, lat, yield, alt, limits);
+                    geom = MyCore.NuclearAlgorithm.GetNuclearPulseGeometry(b.Lon, b.Lat, b.Yield, b.Alt, rule.limit);
                 else
-                    geom = geom.Union(GetNuclearPulseGeometry(lon, lat, yield, alt, limits));
+                    geom = geom.Union(MyCore.NuclearAlgorithm.GetNuclearPulseGeometry(b.Lon, b.Lat, b.Yield, b.Alt, rule.limit));
             }
-            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), limits, unit);
+            return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), rule.limit, rule.unit);
 
         }
         #endregion
@@ -680,32 +338,19 @@ namespace SystemAPIApplication.Services
             double wind_speed = 225;
             double wind_dir = 15;
 
-            // 读取mongo数据库中HB库，用于仿真模拟
             List<FalloutVO> multis = new List<FalloutVO>();
 
-            List<BsonDocument> result = _mongoService.QueryAll();
-            foreach (BsonDocument fireball in result)
+            List<MockBO> bos = _mongoService.QueryMockAll();
+            foreach (var bo in bos)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-                string id = fireball.GetValue("NuclearExplosionID").AsString;
-
-                if (yield >= 1000)
+                if (bo.Yield >= 1000)
                 {
-                    // 传入的是吨，要变成千吨
-                    yield /= 1000;
-
-                    // 输入的是米：要变成：英尺
-                    alt *= 3.2808399;
-
                     //天气接口
                     string url = _config.Weather;//https://localhost:5001/weather
 
                     var timeUtc = (DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000;
 
-                    WeatherBO weatherBO = new WeatherBO(lon, lat, alt, timeUtc);
+                    WeatherBO weatherBO = new WeatherBO(bo.Lon, bo.Lat, bo.Alt, timeUtc);
                     string postBody = Newtonsoft.Json.JsonConvert.SerializeObject(weatherBO);
 
                     try
@@ -722,9 +367,9 @@ namespace SystemAPIApplication.Services
 
                     }
 
-                    Geometry geom = GetFalloutGeometry(lon, lat, yield, alt, wind_speed, wind_dir);
+                    Geometry geom = MyCore.NuclearAlgorithm.GetFalloutGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt, wind_speed, wind_dir);
 
-                    multis.Add(new FalloutVO(id, MyCore.Utils.Translate.Geometry2GeoJson(geom), 1,1, "rads/h"));
+                    multis.Add(new FalloutVO(bo.NuclearExplosionID, MyCore.Utils.Translate.Geometry2GeoJson(geom), 1,1, "rads/h"));
                 }
 
             }
@@ -736,32 +381,19 @@ namespace SystemAPIApplication.Services
             double wind_speed = 225;
             double wind_dir = 15;
 
-            // 读取mongo数据库中HB库，用于仿真模拟
             List<FalloutVO> multis = new List<FalloutVO>();
 
-            List<BsonDocument> result = _mongoService.Query(bo);
-            foreach (BsonDocument fireball in result)
+            List<MockBO> result = _mongoService.QueryMock(bo);
+            foreach (var b in result)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;//米
-                double yield = fireball.GetValue("Yield").AsDouble;//吨
-                string id = fireball.GetValue("NuclearExplosionID").AsString;
-
-                if (yield >= 1000)
+                if (b.Yield >= 1000)
                 {
-                    // 传入的是吨，要变成千吨
-                    yield /= 1000;
-
-                    // 输入的是米：要变成：英尺
-                    alt *= 3.2808399;
-
                     //天气接口
                     string url = _config.Weather;//https://localhost:5001/weather
 
                     var timeUtc = (DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000;
 
-                    WeatherBO weatherBO = new WeatherBO(lon, lat, alt, timeUtc);
+                    WeatherBO weatherBO = new WeatherBO(b.Lon, b.Lat, b.Alt, timeUtc);
                     string postBody = Newtonsoft.Json.JsonConvert.SerializeObject(weatherBO);
 
                     try
@@ -775,12 +407,11 @@ namespace SystemAPIApplication.Services
                     }
                     catch (Exception)
                     {
-
                     }
 
-                    Geometry geom = GetFalloutGeometry(lon, lat, yield, alt, wind_speed, wind_dir);
+                    Geometry geom = MyCore.NuclearAlgorithm.GetFalloutGeometry(b.Lon, b.Lat, b.Yield, b.Alt, wind_speed, wind_dir);
 
-                    multis.Add(new FalloutVO(id, MyCore.Utils.Translate.Geometry2GeoJson(geom), 1,1, "rads/h"));
+                    multis.Add(new FalloutVO(b.NuclearExplosionID, MyCore.Utils.Translate.Geometry2GeoJson(geom), 1,1, "rads/h"));
 
                 }
             }
@@ -794,34 +425,20 @@ namespace SystemAPIApplication.Services
             double wind_speed = 225;
             double wind_dir = 15;
 
-
-
-            // 读取mongo数据库中HB库，用于仿真模拟
             List<FalloutVO> multis = new List<FalloutVO>();
 
             Geometry geom = null;
-            List<BsonDocument> result = _mongoService.QueryAll();
-            foreach (BsonDocument fireball in result)
+            List<MockBO> bos = _mongoService.QueryMockAll();
+            foreach (var bo in bos)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-
-                if (yield >= 1000)
+                if (bo.Yield >= 1000)
                 {
-                    // 传入的是吨，要变成千吨
-                    yield /= 1000;
-
-                    // 输入的是米：要变成：英尺
-                    alt *= 3.2808399;
-
                     //天气接口
                     string url = _config.Weather;//https://localhost:5001/weather
 
                     var timeUtc = (DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000;
 
-                    WeatherBO weatherBO = new WeatherBO(lon, lat, alt, timeUtc);
+                    WeatherBO weatherBO = new WeatherBO(bo.Lon, bo.Lat, bo.Alt, timeUtc);
                     string postBody = Newtonsoft.Json.JsonConvert.SerializeObject(weatherBO);
 
                     try
@@ -839,9 +456,9 @@ namespace SystemAPIApplication.Services
                     }
 
                     if (geom == null)
-                        geom = GetFalloutGeometry(lon, lat, yield, alt, wind_speed, wind_dir);
+                        geom = MyCore.NuclearAlgorithm.GetFalloutGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt, wind_speed, wind_dir);
                     else
-                        geom = geom.Union(GetFalloutGeometry(lon, lat, yield, alt, wind_speed, wind_dir));
+                        geom = geom.Union(MyCore.NuclearAlgorithm.GetFalloutGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt, wind_speed, wind_dir));
 
                 }
             }
@@ -853,32 +470,20 @@ namespace SystemAPIApplication.Services
             double wind_speed = 225;
             double wind_dir = 15;
 
-            // 读取mongo数据库中HB库，用于仿真模拟
             List<FalloutVO> multis = new List<FalloutVO>();
 
             Geometry geom = null;
-            List<BsonDocument> result = _mongoService.Query(bo);
-            foreach (BsonDocument fireball in result)
+            List<MockBO> result = _mongoService.QueryMock(bo);
+            foreach (var b in result)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-
-                if (yield >= 1000)
+                if (b.Yield >= 1000)
                 {
-                    // 传入的是吨，要变成千吨
-                    yield /= 1000;
-
-                    // 输入的是米：要变成：英尺
-                    alt *= 3.2808399;
-
                     //天气接口
                     string url = _config.Weather;//https://localhost:5001/weather
 
                     var timeUtc = (DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000;
 
-                    WeatherBO weatherBO = new WeatherBO(lon, lat, alt, timeUtc);
+                    WeatherBO weatherBO = new WeatherBO(b.Lon, b.Lat, b.Alt, timeUtc);
                     string postBody = Newtonsoft.Json.JsonConvert.SerializeObject(weatherBO);
 
                     try
@@ -896,9 +501,9 @@ namespace SystemAPIApplication.Services
                     }
 
                     if (geom == null)
-                        geom = GetFalloutGeometry(lon, lat, yield, alt, wind_speed, wind_dir);
+                        geom = MyCore.NuclearAlgorithm.GetFalloutGeometry(b.Lon, b.Lat, b.Yield, b.Alt, wind_speed, wind_dir);
                     else
-                        geom = geom.Union(GetFalloutGeometry(lon, lat, yield, alt, wind_speed, wind_dir));
+                        geom = geom.Union(MyCore.NuclearAlgorithm.GetFalloutGeometry(b.Lon, b.Lat, b.Yield, b.Alt, wind_speed, wind_dir));
 
                 }
             }
@@ -926,10 +531,9 @@ namespace SystemAPIApplication.Services
             rule = _mongoService.QueryRule("核电磁脉冲");
             if (rule != null) vm = rule.limits;
 
-            // 读取mongo数据库中HB库，用于仿真模拟
             List<DamageMultiVO> damageMultiVOs = new List<DamageMultiVO>();
 
-            List<BsonDocument> result = _mongoService.QueryAll();
+            List<MockBO> bos = _mongoService.QueryMockAll();
 
             List<MultiVO> multiVOs_01 = new List<MultiVO>();
             List<MultiVO> multiVOs_02 = new List<MultiVO>();
@@ -937,40 +541,29 @@ namespace SystemAPIApplication.Services
             List<MultiVO> multiVOs_04 = new List<MultiVO>();
             List<MultiVO> multiVOs_05 = new List<MultiVO>();
 
-            foreach (BsonDocument nuke in result)
+            foreach (var bo in bos)
             {
-                double lon = nuke.GetValue("Lon").AsDouble;
-                double lat = nuke.GetValue("Lat").AsDouble;
-                double alt = nuke.GetValue("Alt").AsDouble;
-                double yield = nuke.GetValue("Yield").AsDouble;
+                double r = MyCore.NuclearAlgorithm.GetFireBallRadius(bo.Yield, bo.Alt);
+                multiVOs_01.Add(new MultiVO(bo.NuclearExplosionID, Math.Round(r, 2), bo.Lon, bo.Lat, bo.Alt, 0, ""));
 
-                string id = nuke.GetValue("NuclearExplosionID").AsString;
+                r = MyCore.NuclearAlgorithm.GetNuclearRadiationRadius(bo.Yield, bo.Alt, rem);
+                multiVOs_02.Add(new MultiVO(bo.NuclearExplosionID, Math.Round(r, 2), bo.Lon, bo.Lat, bo.Alt, rem, "rem"));
 
-                // 吨变千吨；米变英尺
-                double r = GetFireBallRadius(yield / 1000, alt * MyCore.Utils.Const.M2FT);
-                multiVOs_01.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, 0, ""));
+                r = MyCore.NuclearAlgorithm.GetShockWaveRadius(bo.Yield, bo.Alt, psi);
+                multiVOs_03.Add(new MultiVO(bo.NuclearExplosionID, Math.Round(r, 2), bo.Lon, bo.Lat, bo.Alt, psi, "psi"));
 
-                r = GetNuclearRadiationRadius(yield / 1000, alt * MyCore.Utils.Const.M2FT);
-                multiVOs_02.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, rem, "rem"));
+                r = MyCore.NuclearAlgorithm.GetThermalRadiationRadius(bo.Yield, bo.Alt, calcm);
+                multiVOs_04.Add(new MultiVO(bo.NuclearExplosionID, Math.Round(r, 2), bo.Lon, bo.Lat, bo.Alt, calcm, "cal/cm²"));
 
-                r = GetShockWaveRadius(yield / 1000, alt * MyCore.Utils.Const.M2FT, 99999);
-                multiVOs_03.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, psi, "psi"));
-
-                r = GetNuclearRadiationRadius(yield / 1000, alt * MyCore.Utils.Const.M2FT);
-                multiVOs_04.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, calcm, "cal/cm²"));
-
-                // 吨不变；米变千米
-                r = GetNuclearPulseRadius(yield, alt / 1000.0, 999);
-
-                // 上一步r的返回值是千米，所以要变成米
-                multiVOs_05.Add(new MultiVO(id, Math.Round(r * 1000, 2), lon, lat, alt, vm, "v/m"));
+                r = MyCore.NuclearAlgorithm.GetNuclearPulseRadius(bo.Yield, bo.Alt, vm);
+                multiVOs_05.Add(new MultiVO(bo.NuclearExplosionID, Math.Round(r , 2), bo.Lon, bo.Lat, bo.Alt, vm, "v/m"));
 
             }
-            damageMultiVOs.Add(new DamageMultiVO("H火球", multiVOs_01));
-            damageMultiVOs.Add(new DamageMultiVO("核辐射", multiVOs_02));
+            damageMultiVOs.Add(new DamageMultiVO("核火球", multiVOs_01));
+            damageMultiVOs.Add(new DamageMultiVO("早期核辐射", multiVOs_02));
             damageMultiVOs.Add(new DamageMultiVO("冲击波", multiVOs_03));
-            damageMultiVOs.Add(new DamageMultiVO("热/光辐射", multiVOs_04));
-            damageMultiVOs.Add(new DamageMultiVO("电磁脉冲", multiVOs_05));
+            damageMultiVOs.Add(new DamageMultiVO("光辐射", multiVOs_04));
+            damageMultiVOs.Add(new DamageMultiVO("核电磁脉冲", multiVOs_05));
 
             return damageMultiVOs;
         }
@@ -992,10 +585,9 @@ namespace SystemAPIApplication.Services
             rule = _mongoService.QueryRule("核电磁脉冲");
             if (rule != null) vm = rule.limits;
 
-            // 读取mongo数据库中HB库，用于仿真模拟
             List<DamageMultiVO> damageMultiVOs = new List<DamageMultiVO>();
 
-            List<BsonDocument> result = _mongoService.Query(bo);
+            List<MockBO> result = _mongoService.QueryMock(bo);
 
             List<MultiVO> multiVOs_01 = new List<MultiVO>();
             List<MultiVO> multiVOs_02 = new List<MultiVO>();
@@ -1003,40 +595,29 @@ namespace SystemAPIApplication.Services
             List<MultiVO> multiVOs_04 = new List<MultiVO>();
             List<MultiVO> multiVOs_05 = new List<MultiVO>();
 
-            foreach (BsonDocument nuke in result)
+            foreach (var b in result)
             {
-                double lon = nuke.GetValue("Lon").AsDouble;
-                double lat = nuke.GetValue("Lat").AsDouble;
-                double alt = nuke.GetValue("Alt").AsDouble;
-                double yield = nuke.GetValue("Yield").AsDouble;
+                double r = MyCore.NuclearAlgorithm.GetFireBallRadius(b.Yield, b.Alt);
+                multiVOs_01.Add(new MultiVO(b.NuclearExplosionID, Math.Round(r, 2), b.Lon, b.Lat, b.Alt, 0, ""));
 
-                string id = nuke.GetValue("NuclearExplosionID").AsString;
+                r = MyCore.NuclearAlgorithm.GetNuclearRadiationRadius(b.Yield, b.Alt, rem);
+                multiVOs_02.Add(new MultiVO(b.NuclearExplosionID, Math.Round(r, 2), b.Lon, b.Lat, b.Alt, rem, "rem"));
 
-                // 吨变千吨；米变英尺
-                double r = GetFireBallRadius(yield / 1000, alt * MyCore.Utils.Const.M2FT);
-                multiVOs_01.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, 0, ""));
+                r = MyCore.NuclearAlgorithm.GetShockWaveRadius(b.Yield, b.Alt, psi);
+                multiVOs_03.Add(new MultiVO(b.NuclearExplosionID, Math.Round(r, 2), b.Lon, b.Lat, b.Alt, psi, "psi"));
 
-                r = GetNuclearRadiationRadius(yield / 1000, alt * MyCore.Utils.Const.M2FT);
-                multiVOs_02.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, rem, "rem"));
+                r = MyCore.NuclearAlgorithm.GetThermalRadiationRadius(b.Yield, b.Alt, calcm);
+                multiVOs_04.Add(new MultiVO(b.NuclearExplosionID, Math.Round(r, 2), b.Lon, b.Lat, b.Alt, calcm, "cal/cm²"));
 
-                r = GetShockWaveRadius(yield / 1000, alt * MyCore.Utils.Const.M2FT, 99999);
-                multiVOs_03.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, psi, "psi"));
-
-                r = GetNuclearRadiationRadius(yield / 1000, alt * MyCore.Utils.Const.M2FT);
-                multiVOs_04.Add(new MultiVO(id, Math.Round(r, 2), lon, lat, alt, calcm, "cal/cm²"));
-
-                // 吨不变；米变千米
-                r = GetNuclearPulseRadius(yield, alt / 1000.0, 999);
-
-                // 上一步r的返回值是千米，所以要变成米
-                multiVOs_05.Add(new MultiVO(id, Math.Round(r * 1000, 2), lon, lat, alt, vm, "v/m"));
-
+                r = MyCore.NuclearAlgorithm.GetNuclearPulseRadius(b.Yield, b.Alt, vm);
+                multiVOs_05.Add(new MultiVO(b.NuclearExplosionID, Math.Round(r, 2), b.Lon, b.Lat, b.Alt, vm, "v/m"));
             }
-            damageMultiVOs.Add(new DamageMultiVO("H火球", multiVOs_01));
-            damageMultiVOs.Add(new DamageMultiVO("核辐射", multiVOs_02));
+
+            damageMultiVOs.Add(new DamageMultiVO("核火球", multiVOs_01));
+            damageMultiVOs.Add(new DamageMultiVO("早期核辐射", multiVOs_02));
             damageMultiVOs.Add(new DamageMultiVO("冲击波", multiVOs_03));
-            damageMultiVOs.Add(new DamageMultiVO("热/光辐射", multiVOs_04));
-            damageMultiVOs.Add(new DamageMultiVO("电磁脉冲", multiVOs_05));
+            damageMultiVOs.Add(new DamageMultiVO("光辐射", multiVOs_04));
+            damageMultiVOs.Add(new DamageMultiVO("核电磁脉冲", multiVOs_05));
 
             return damageMultiVOs;
         }
@@ -1059,10 +640,9 @@ namespace SystemAPIApplication.Services
             rule = _mongoService.QueryRule("核电磁脉冲");
             if (rule != null) vm = rule.limits;
 
-            // 读取mongo数据库中HB库，用于仿真模拟
             List<DamageMergeVO> damageMergeVOs = new List<DamageMergeVO>();
 
-            List<BsonDocument> result = _mongoService.QueryAll();
+            List<MockBO> bos = _mongoService.QueryMockAll();
 
             Geometry geom_01 = null;
             Geometry geom_02 = null;
@@ -1071,47 +651,40 @@ namespace SystemAPIApplication.Services
             Geometry geom_05 = null;
 
 
-            foreach (BsonDocument fireball in result)
+            foreach (var bo in bos)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-
-                // 吨变千吨；米变英尺
                 if (geom_01 == null)
-                    geom_01 = GetFireBallGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT);
+                    geom_01 = MyCore.NuclearAlgorithm.GetFireBallGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt);
                 else
-                    geom_01 = geom_01.Union(GetFireBallGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT));
+                    geom_01 = geom_01.Union(MyCore.NuclearAlgorithm.GetFireBallGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt));
 
                 if (geom_02 == null)
-                    geom_02 = GetNuclearRadiationGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, rem);
+                    geom_02 = MyCore.NuclearAlgorithm.GetNuclearRadiationGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt, rem);
                 else
-                    geom_02 = geom_02.Union(GetNuclearRadiationGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, rem));
+                    geom_02 = geom_02.Union(MyCore.NuclearAlgorithm.GetNuclearRadiationGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt, rem));
 
                 if (geom_03 == null)
-                    geom_03 = GetShockWaveGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, psi);
+                    geom_03 = MyCore.NuclearAlgorithm.GetShockWaveGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt, psi);
                 else
-                    geom_03 = geom_03.Union(GetShockWaveGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, psi));
+                    geom_03 = geom_03.Union(MyCore.NuclearAlgorithm.GetShockWaveGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt, psi));
 
                 if (geom_04 == null)
-                    geom_04 = GetThermalRadiationGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, calcm);
+                    geom_04 = MyCore.NuclearAlgorithm.GetThermalRadiationGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt, calcm);
                 else
-                    geom_04 = geom_04.Union(GetThermalRadiationGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, calcm));
+                    geom_04 = geom_04.Union(MyCore.NuclearAlgorithm.GetThermalRadiationGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt, calcm));
 
-                //吨不变，米变千米
                 if (geom_05 == null)
-                    geom_05 = GetNuclearPulseGeometry(lon, lat, yield, alt / 1000.0, vm);
+                    geom_05 = MyCore.NuclearAlgorithm.GetNuclearPulseGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt, vm);
                 else
-                    geom_05 = geom_05.Union(GetNuclearPulseGeometry(lon, lat, yield, alt / 1000.0, vm));
+                    geom_05 = geom_05.Union(MyCore.NuclearAlgorithm.GetNuclearPulseGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt, vm));
 
             }
 
-            damageMergeVOs.Add(new DamageMergeVO("H火球", MyCore.Utils.Translate.Geometry2GeoJson(geom_01), 0, ""));
-            damageMergeVOs.Add(new DamageMergeVO("核辐射", MyCore.Utils.Translate.Geometry2GeoJson(geom_02), rem, "rem"));
+            damageMergeVOs.Add(new DamageMergeVO("核火球", MyCore.Utils.Translate.Geometry2GeoJson(geom_01), 0, ""));
+            damageMergeVOs.Add(new DamageMergeVO("早期核辐射", MyCore.Utils.Translate.Geometry2GeoJson(geom_02), rem, "rem"));
             damageMergeVOs.Add(new DamageMergeVO("冲击波", MyCore.Utils.Translate.Geometry2GeoJson(geom_03), psi, "psi"));
-            damageMergeVOs.Add(new DamageMergeVO("热/光辐射", MyCore.Utils.Translate.Geometry2GeoJson(geom_04), calcm, "cal/cm²"));
-            damageMergeVOs.Add(new DamageMergeVO("电磁脉冲", MyCore.Utils.Translate.Geometry2GeoJson(geom_05), vm, "v/m"));
+            damageMergeVOs.Add(new DamageMergeVO("光辐射", MyCore.Utils.Translate.Geometry2GeoJson(geom_04), calcm, "cal/cm²"));
+            damageMergeVOs.Add(new DamageMergeVO("核电磁脉冲", MyCore.Utils.Translate.Geometry2GeoJson(geom_05), vm, "v/m"));
 
             return damageMergeVOs;
         }
@@ -1133,10 +706,9 @@ namespace SystemAPIApplication.Services
             rule = _mongoService.QueryRule("核电磁脉冲");
             if (rule != null) vm = rule.limits;
 
-            // 读取mongo数据库中HB库，用于仿真模拟
             List<DamageMergeVO> damageMergeVOs = new List<DamageMergeVO>();
 
-            List<BsonDocument> result = _mongoService.Query(bo);
+            List<MockBO> result = _mongoService.QueryMock(bo);
 
             Geometry geom_01 = null;
             Geometry geom_02 = null;
@@ -1144,193 +716,65 @@ namespace SystemAPIApplication.Services
             Geometry geom_04 = null;
             Geometry geom_05 = null;
 
-
-            foreach (BsonDocument fireball in result)
+            foreach (var b in result)
             {
-                double lon = fireball.GetValue("Lon").AsDouble;
-                double lat = fireball.GetValue("Lat").AsDouble;
-                double alt = fireball.GetValue("Alt").AsDouble;
-                double yield = fireball.GetValue("Yield").AsDouble;
-
-                // 吨变千吨；米变英尺
                 if (geom_01 == null)
-                    geom_01 = GetFireBallGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT);
+                    geom_01 = MyCore.NuclearAlgorithm.GetFireBallGeometry(b.Lon, b.Lat, b.Yield, b.Alt);
                 else
-                    geom_01 = geom_01.Union(GetFireBallGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT));
+                    geom_01 = geom_01.Union(MyCore.NuclearAlgorithm.GetFireBallGeometry(b.Lon, b.Lat, b.Yield, b.Alt));
 
                 if (geom_02 == null)
-                    geom_02 = GetNuclearRadiationGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, rem);
+                    geom_02 = MyCore.NuclearAlgorithm.GetNuclearRadiationGeometry(b.Lon, b.Lat, b.Yield, b.Alt, rem);
                 else
-                    geom_02 = geom_02.Union(GetNuclearRadiationGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, rem));
+                    geom_02 = geom_02.Union(MyCore.NuclearAlgorithm.GetNuclearRadiationGeometry(b.Lon, b.Lat, b.Yield, b.Alt, rem));
 
                 if (geom_03 == null)
-                    geom_03 = GetShockWaveGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, psi);
+                    geom_03 = MyCore.NuclearAlgorithm.GetShockWaveGeometry(b.Lon, b.Lat, b.Yield, b.Alt, psi);
                 else
-                    geom_03 = geom_03.Union(GetShockWaveGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, psi));
+                    geom_03 = geom_03.Union(MyCore.NuclearAlgorithm.GetShockWaveGeometry(b.Lon, b.Lat, b.Yield, b.Alt, psi));
 
                 if (geom_04 == null)
-                    geom_04 = GetThermalRadiationGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, calcm);
+                    geom_04 = MyCore.NuclearAlgorithm.GetThermalRadiationGeometry(b.Lon, b.Lat, b.Yield, b.Alt, calcm);
                 else
-                    geom_04 = geom_04.Union(GetThermalRadiationGeometry(lon, lat, yield / 1000, alt * MyCore.Utils.Const.M2FT, calcm));
+                    geom_04 = geom_04.Union(MyCore.NuclearAlgorithm.GetThermalRadiationGeometry(b.Lon, b.Lat, b.Yield, b.Alt, calcm));
 
-                //吨不变，米变千米
                 if (geom_05 == null)
-                    geom_05 = GetNuclearPulseGeometry(lon, lat, yield, alt / 1000.0, vm);
+                    geom_05 = MyCore.NuclearAlgorithm.GetNuclearPulseGeometry(b.Lon, b.Lat, b.Yield, b.Alt, vm);
                 else
-                    geom_05 = geom_05.Union(GetNuclearPulseGeometry(lon, lat, yield, alt / 1000.0, vm));
+                    geom_05 = geom_05.Union(MyCore.NuclearAlgorithm.GetNuclearPulseGeometry(b.Lon, b.Lat, b.Yield, b.Alt, vm));
 
             }
 
-            damageMergeVOs.Add(new DamageMergeVO("H火球", MyCore.Utils.Translate.Geometry2GeoJson(geom_01), 0, ""));
-            damageMergeVOs.Add(new DamageMergeVO("核辐射", MyCore.Utils.Translate.Geometry2GeoJson(geom_02), rem, "rem"));
+            damageMergeVOs.Add(new DamageMergeVO("核火球", MyCore.Utils.Translate.Geometry2GeoJson(geom_01), 0, ""));
+            damageMergeVOs.Add(new DamageMergeVO("早期核辐射", MyCore.Utils.Translate.Geometry2GeoJson(geom_02), rem, "rem"));
             damageMergeVOs.Add(new DamageMergeVO("冲击波", MyCore.Utils.Translate.Geometry2GeoJson(geom_03), psi, "psi"));
-            damageMergeVOs.Add(new DamageMergeVO("热/光辐射", MyCore.Utils.Translate.Geometry2GeoJson(geom_04), calcm, "cal/cm²"));
-            damageMergeVOs.Add(new DamageMergeVO("电磁脉冲", MyCore.Utils.Translate.Geometry2GeoJson(geom_05), vm, "v/m"));
+            damageMergeVOs.Add(new DamageMergeVO("光辐射", MyCore.Utils.Translate.Geometry2GeoJson(geom_04), calcm, "cal/cm²"));
+            damageMergeVOs.Add(new DamageMergeVO("核电磁脉冲", MyCore.Utils.Translate.Geometry2GeoJson(geom_05), vm, "v/m"));
 
             return damageMergeVOs;
         }
 
         #endregion
 
-
-        /*  
-         *  火球  
-         */
-        private Geometry GetFireBallGeometry(double lon, double lat, double yield, double alt)
+        internal class LimitUnit
         {
-            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
-            double r =  myAnalyse.CalcfireBallRadius(yield, alt > 0);
-
-            Geometry geom = MyCore.Utils.Translate.BuildCircle(lon, lat, r / 1000.0, 50);
-
-
-            return geom;
-        }
-        private double GetFireBallRadius(double yield, double alt)
-        {
-            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
-            return myAnalyse.CalcfireBallRadius(yield, alt > 0);
-        }
-
-        /* 
-         * 核辐射 
-         */
-
-
-        private Geometry GetNuclearRadiationGeometry(double lon, double lat, double yield, double alt,double limits)
-        {
-            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
-
-            double r = myAnalyse.CalcNuclearRadiationRadius(yield, alt, limits);
-
-            //根据(lng,lat,R)生成Geometry
-            Geometry geom = MyCore.Utils.Translate.BuildCircle(lon, lat, r / 1000.0, 50);
-
-            return geom;
-        }
-
-        private double GetNuclearRadiationRadius(double yield, double alt)
-        {
-            // 没用了
-            double limits = 100;
-            var rule = _mongoService.QueryRule("早期核辐射");
-            if (rule != null)
-                limits = rule.limits;
-
-            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
-            return myAnalyse.CalcNuclearRadiationRadius(yield, alt, limits);
-        }
-
-        /* 
-         * 冲击波 
-         */
-        private Geometry GetShockWaveGeometry(double lon, double lat, double yield, double alt,double limits)
-        {
-
-            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
-
-            // 求核爆影响范围半径[54609,21249,10101,3734,1537]
-            double r = myAnalyse.CalcShockWaveRadius(yield, alt, limits);
-
-            //根据(lng,lat,R)生成Geometry
-            Geometry geom = MyCore.Utils.Translate.BuildCircle(lon, lat, r / 1000.0, 50);
-            return geom;
-        }
-
-        private double GetShockWaveRadius(double yield, double alt,double limits)
-        {
-            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
-            return myAnalyse.CalcShockWaveRadius(yield,alt, limits);
-        }
-
-        /* 
-         * 光、热辐射 
-         */
-        private Geometry GetThermalRadiationGeometry(double lon, double lat, double yield, double alt,double limits)
-        {
-
-            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
-
-            double r = myAnalyse.GetThermalRadiationR(yield, lat, limits);
-
-            //根据(lng,lat,R)生成Geometry
-            Geometry geom = MyCore.Utils.Translate.BuildCircle(lon, lat, r / 1000.0, 50);
-
-            return geom;
-        }
-        private double GetThermalRadiationRadius(double yield, double alt,double limits)
-        {
-            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
-            return myAnalyse.GetThermalRadiationR(yield, alt, limits);
-        }
-
-        /* 
-        * 核电磁脉冲 
-        */
-        private Geometry GetNuclearPulseGeometry(double lon, double lat, double yield, double alt,double limits)
-        {
-            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
-
-            double r = myAnalyse.CalcNuclearPulseRadius(yield, alt, limits);
-
-            //根据(lng,lat,R)生成Geometry。
-            // 注意，因为r返回的就是千米，而BuildCircle，需要传入的也是千米，所以就不用除以1000了
-            Geometry geom = MyCore.Utils.Translate.BuildCircle(lon, lat, r, 50);
-            return geom;
-        }
-        private double GetNuclearPulseRadius(double yield, double alt,double limits)
-        {
-            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
-            return myAnalyse.CalcNuclearPulseRadius(yield, alt, limits);
-        }
-
-        /*
-         * 核沉降
-         */
-        private Geometry GetFalloutGeometry(double lon, double lat, double yield, double alt, double wind_speed, double wind_dir)
-        {
-            MyCore.MyAnalyse myAnalyse = new MyCore.MyAnalyse();
-            double maximumDownwindDistance = 0;
-            double maximumWidth = 0;
-            List<MyCore.Coor> coors = myAnalyse.CalcRadioactiveFalloutRegion(
-                lon, lat, alt, yield, wind_speed, wind_dir, MyCore.enums.DamageEnumeration.Light,
-                ref maximumDownwindDistance, ref maximumWidth);
-
-            List<Coordinate> coordinates = new List<Coordinate>();
-            for (int i = 0; i < coors.Count; i++)
+            public LimitUnit(string unit, double limit)
             {
-                coordinates.Add(new Coordinate(coors[i].lng, coors[i].lat));
+                this.unit = unit;
+                this.limit = limit;
             }
 
-            // 把coordinators 转换成geometry
-            Coordinate[] coords = coordinates.ToArray();
-            Polygon polygon = new NetTopologySuite.Geometries.Polygon(
-                new LinearRing(coords));
-
-            return polygon;
+            public string unit { get; set; }
+            public double limit { get; set; }
         }
-
-
-
+        private LimitUnit QueryLimits(string clsName)
+        {
+            var rule = _mongoService.QueryRule(clsName);
+            if (rule != null)
+            {
+                return new LimitUnit(rule.unit, rule.limits);
+            }
+            return null;
+        }
     }
 }

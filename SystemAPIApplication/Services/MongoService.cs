@@ -18,32 +18,17 @@ namespace SystemAPIApplication.Services
         {
             _config = setting.Value;
             string conn = "mongodb://" + _config.IP + ":" + _config.Port;
-            //_client = new MongoClient("mongodb://localhost:27017");
             _client = new MongoClient(conn);
         }
 
-        //{
-        //    "_id":{"$oid":"5e9cf04bf05700001d006b23"},
-        //    "NuclearExplosionID":"test001",
-        //    "OccurTime":{"$date":"2020-04-20T12:00:00.000Z"},
-        //    "Lon":105.5,
-        //    "Lat":35.4,
-        //    "Alt":1000.0,
-        //    "Yield":30.5,
-        //    "Producer":"生产单位1",
-        //    "DetectionType":"电磁",
-        //    "ReportTime":{"$date":"2020-04-01T12:21:00.000Z"},
-        //    "Nonce":"0cdb25e7-1ece-4de6-b7ed-1f535697672e"
-        //}
-        public List<BsonDocument> Query(string[] ids)
+        
+        public List<MockBO> QueryMock(string[] ids)
         {
-            
-            var collection = _client.GetDatabase(_config.MockSetting.Database).
-                GetCollection<BsonDocument>(_config.MockSetting.Collection);
-            //var collection = _client.GetDatabase("hb").GetCollection<BsonDocument>("hbmock");
+            IMongoCollection<MockBO> collection = _client.GetDatabase(_config.MockSetting.Database).
+                GetCollection<MockBO>(_config.MockSetting.Collection);
 
-            var filter = Builders<BsonDocument>.Filter;
-            FilterDefinition<BsonDocument> filterDefinition1 = null;
+            var filter = Builders<MockBO>.Filter;
+            FilterDefinition<MockBO> filterDefinition1 = null;
 
             if (ids != null)
             {
@@ -55,7 +40,7 @@ namespace SystemAPIApplication.Services
                         filterDefinition1 = filterDefinition1 | filter.Eq("NuclearExplosionID", id);
                 }
 
-                FilterDefinition<BsonDocument> filterDefinition = new BsonDocument();
+                FilterDefinition<MockBO> filterDefinition = null;
                 if (filterDefinition1 != null)
                     filterDefinition = filterDefinition1;
 
@@ -66,17 +51,18 @@ namespace SystemAPIApplication.Services
             return null;
 
         }
+       
 
-        public List<BsonDocument> QueryAll()
+        public List<MockBO> QueryMockAll()
         {
-            var collection = _client.GetDatabase(_config.MockSetting.Database).
-                GetCollection<BsonDocument>(_config.MockSetting.Collection);
-            //var collection = _client.GetDatabase("hb").GetCollection<BsonDocument>("hbmock");
+            IMongoCollection<MockBO> collection = _client.GetDatabase(_config.MockSetting.Database).
+                GetCollection<MockBO>(_config.MockSetting.Collection);
 
-            //FilterDefinition<BsonDocument> filterDefinition = null;
-            var filter = Builders<BsonDocument>.Filter;
+            var filter = Builders<MockBO>.Filter;
             return collection.Find(filter.Empty).ToList();
         }
+
+        
 
         public RuleBo QueryRule(string name)
         {

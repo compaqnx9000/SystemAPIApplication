@@ -14,7 +14,6 @@ namespace SystemAPIApplication.Controllers
     public class NuclearPulseController : ControllerBase
     {
         private readonly IGeometryAnalysisService _geometryAnalysisService;
-        private readonly IMongoService _mongoService;
 
         public NuclearPulseController(IGeometryAnalysisService geometryAnalysisService)
         {

@@ -20,7 +20,6 @@ namespace SystemAPIApplication.Controllers
     {
         private readonly IGeometryAnalysisService _geometryAnalysisService;
 
-
         public FalloutController(IGeometryAnalysisService geometryAnalysisService)
         {
             _geometryAnalysisService = geometryAnalysisService ??
@@ -33,7 +32,7 @@ namespace SystemAPIApplication.Controllers
             return new JsonResult(new
             {
                 return_status = 0,
-                return_msg = "If the equivalent is less than 1000 tons, it will be skipped",
+                return_msg = "如果当量小于1000吨，则无法计算出结果",
                 return_data = _geometryAnalysisService.FalloutMerge()
             });
         }
@@ -43,7 +42,7 @@ namespace SystemAPIApplication.Controllers
             return new JsonResult(new
             {
                 return_status = 0,
-                return_msg = "If the equivalent is less than 1000 tons, it will be skipped",
+                return_msg = "如果当量小于1000吨，则无法计算出结果",
                 return_data = _geometryAnalysisService.FalloutMerge(bo)
             });
         }
@@ -53,7 +52,7 @@ namespace SystemAPIApplication.Controllers
             return new JsonResult(new
             {
                 return_status = 0,
-                return_msg = "If the equivalent is less than 1000 tons, it will be skipped",
+                return_msg = "如果当量小于1000吨，则无法计算出结果",
                 return_data = _geometryAnalysisService.FalloutMulti()
             });
         }
@@ -63,7 +62,7 @@ namespace SystemAPIApplication.Controllers
             return new JsonResult(new
             {
                 return_status = 0,
-                return_msg = "If the equivalent is less than 1000 tons, it will be skipped",
+                return_msg = "如果当量小于1000吨，则无法计算出结果",
                 return_data = _geometryAnalysisService.FalloutMulti(bo)
             });
         }

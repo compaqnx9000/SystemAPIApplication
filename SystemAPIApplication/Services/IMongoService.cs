@@ -10,8 +10,8 @@ namespace SystemAPIApplication.Services
 {
     public interface IMongoService
     {
-        List<BsonDocument> Query(string[] ids);
-        List<BsonDocument> QueryAll();
+        List<MockBO> QueryMock(string[] ids);
+        List<MockBO> QueryMockAll();
         RuleBo QueryRule(string name);
 
     }
