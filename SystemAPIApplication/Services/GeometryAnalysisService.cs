@@ -231,7 +231,6 @@ namespace SystemAPIApplication.Services
                 multis.Add(new MultiVO(b.NuclearExplosionID, Math.Round(r, 2), b.Lon, b.Lat, b.Alt, rule.limit, rule.unit));
             }
             return multis;
-
         }
         public GeometryVO ThermalradiationMerge()
         {
@@ -247,7 +246,6 @@ namespace SystemAPIApplication.Services
                     geom = geom.Union(MyCore.NuclearAlgorithm.GetThermalRadiationGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt, rule.limit));
             }
             return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), rule.limit, rule.unit);
-
         }
         public GeometryVO ThermalradiationMerge(string[] bo)
         {
@@ -263,7 +261,6 @@ namespace SystemAPIApplication.Services
                     geom = geom.Union(MyCore.NuclearAlgorithm.GetThermalRadiationGeometry(b.Lon, b.Lat, b.Yield, b.Alt, rule.limit));
             }
             return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), rule.limit, rule.unit);
-
         }
         #endregion
 
@@ -295,7 +292,6 @@ namespace SystemAPIApplication.Services
                 multis.Add(new MultiVO(b.NuclearExplosionID, Math.Round(r , 2), b.Lon, b.Lat, b.Alt, rule.limit, rule.unit));
             }
             return multis;
-
         }
         public GeometryVO NuclearpulseMerge()
         {
@@ -311,7 +307,6 @@ namespace SystemAPIApplication.Services
                     geom = geom.Union(MyCore.NuclearAlgorithm.GetNuclearPulseGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt, rule.limit));
             }
             return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), rule.limit, rule.unit);
-
         }
         public GeometryVO NuclearpulseMerge(string[] bo)
         {
@@ -327,14 +322,12 @@ namespace SystemAPIApplication.Services
                     geom = geom.Union(MyCore.NuclearAlgorithm.GetNuclearPulseGeometry(b.Lon, b.Lat, b.Yield, b.Alt, rule.limit));
             }
             return new GeometryVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), rule.limit, rule.unit);
-
         }
         #endregion
 
         #region 核沉降
         public List<FalloutVO> FalloutMulti()
         {
-            //TODO:  需要读取API获取风速和风向
             double wind_speed = 225;
             double wind_dir = 15;
 
@@ -345,27 +338,7 @@ namespace SystemAPIApplication.Services
             {
                 if (bo.Yield >= 1000)
                 {
-                    //天气接口
-                    string url = _config.Weather;//https://localhost:5001/weather
-
-                    var timeUtc = (DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000;
-
-                    WeatherBO weatherBO = new WeatherBO(bo.Lon, bo.Lat, bo.Alt, timeUtc);
-                    string postBody = Newtonsoft.Json.JsonConvert.SerializeObject(weatherBO);
-
-                    try
-                    {
-                        Task<string> s = MyCore.Utils.HttpCli.PostAsyncJson(url, postBody);
-                        s.Wait();
-                        JObject jo = (JObject)Newtonsoft.Json.JsonConvert.DeserializeObject(s.Result);//或者JObject jo = JObject.Parse(jsonText);
-
-                        wind_speed = Double.Parse(jo["return_data"]["wind_speed"].ToString());
-                        wind_dir = Double.Parse(jo["return_data"]["wind_dir"].ToString());
-                    }
-                    catch (Exception)
-                    {
-
-                    }
+                    QueryWeather(bo.Lon, bo.Lat, bo.Alt, ref wind_speed, ref wind_dir);
 
                     Geometry geom = MyCore.NuclearAlgorithm.GetFalloutGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt, wind_speed, wind_dir);
 
@@ -377,7 +350,6 @@ namespace SystemAPIApplication.Services
         }
         public List<FalloutVO> FalloutMulti(string[] bo)
         {
-            //TODO:  需要读取API获取风速和风向
             double wind_speed = 225;
             double wind_dir = 15;
 
@@ -388,26 +360,7 @@ namespace SystemAPIApplication.Services
             {
                 if (b.Yield >= 1000)
                 {
-                    //天气接口
-                    string url = _config.Weather;//https://localhost:5001/weather
-
-                    var timeUtc = (DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000;
-
-                    WeatherBO weatherBO = new WeatherBO(b.Lon, b.Lat, b.Alt, timeUtc);
-                    string postBody = Newtonsoft.Json.JsonConvert.SerializeObject(weatherBO);
-
-                    try
-                    {
-                        Task<string> s = MyCore.Utils.HttpCli.PostAsyncJson(url, postBody);
-                        s.Wait();
-                        JObject jo = (JObject)Newtonsoft.Json.JsonConvert.DeserializeObject(s.Result);//或者JObject jo = JObject.Parse(jsonText);
-
-                        wind_speed = Double.Parse(jo["return_data"]["wind_speed"].ToString());
-                        wind_dir = Double.Parse(jo["return_data"]["wind_dir"].ToString());
-                    }
-                    catch (Exception)
-                    {
-                    }
+                    QueryWeather(b.Lon, b.Lat, b.Alt, ref wind_speed, ref wind_dir);
 
                     Geometry geom = MyCore.NuclearAlgorithm.GetFalloutGeometry(b.Lon, b.Lat, b.Yield, b.Alt, wind_speed, wind_dir);
 
@@ -416,12 +369,9 @@ namespace SystemAPIApplication.Services
                 }
             }
             return multis;
-
         }
         public GeometryMergeVO FalloutMerge()
         {
-            //TODO:  需要读取API获取风速和风向
-
             double wind_speed = 225;
             double wind_dir = 15;
 
@@ -433,27 +383,7 @@ namespace SystemAPIApplication.Services
             {
                 if (bo.Yield >= 1000)
                 {
-                    //天气接口
-                    string url = _config.Weather;//https://localhost:5001/weather
-
-                    var timeUtc = (DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000;
-
-                    WeatherBO weatherBO = new WeatherBO(bo.Lon, bo.Lat, bo.Alt, timeUtc);
-                    string postBody = Newtonsoft.Json.JsonConvert.SerializeObject(weatherBO);
-
-                    try
-                    {
-                        Task<string> s = MyCore.Utils.HttpCli.PostAsyncJson(url, postBody);
-                        s.Wait();
-                        JObject jo = (JObject)Newtonsoft.Json.JsonConvert.DeserializeObject(s.Result);//或者JObject jo = JObject.Parse(jsonText);
-
-                        wind_speed = Double.Parse(jo["return_data"]["wind_speed"].ToString());
-                        wind_dir = Double.Parse(jo["return_data"]["wind_dir"].ToString());
-                    }
-                    catch (Exception)
-                    {
-
-                    }
+                    QueryWeather(bo.Lon, bo.Lat, bo.Alt, ref wind_speed, ref wind_dir);
 
                     if (geom == null)
                         geom = MyCore.NuclearAlgorithm.GetFalloutGeometry(bo.Lon, bo.Lat, bo.Yield, bo.Alt, wind_speed, wind_dir);
@@ -466,7 +396,6 @@ namespace SystemAPIApplication.Services
         }
         public GeometryMergeVO FalloutMerge(string[] bo)
         {
-            //TODO:  需要读取API获取风速和风向
             double wind_speed = 225;
             double wind_dir = 15;
 
@@ -478,27 +407,7 @@ namespace SystemAPIApplication.Services
             {
                 if (b.Yield >= 1000)
                 {
-                    //天气接口
-                    string url = _config.Weather;//https://localhost:5001/weather
-
-                    var timeUtc = (DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000;
-
-                    WeatherBO weatherBO = new WeatherBO(b.Lon, b.Lat, b.Alt, timeUtc);
-                    string postBody = Newtonsoft.Json.JsonConvert.SerializeObject(weatherBO);
-
-                    try
-                    {
-                        Task<string> s = MyCore.Utils.HttpCli.PostAsyncJson(url, postBody);
-                        s.Wait();
-                        JObject jo = (JObject)Newtonsoft.Json.JsonConvert.DeserializeObject(s.Result);//或者JObject jo = JObject.Parse(jsonText);
-
-                        wind_speed = Double.Parse(jo["return_data"]["wind_speed"].ToString());
-                        wind_dir = Double.Parse(jo["return_data"]["wind_dir"].ToString());
-                    }
-                    catch (Exception)
-                    {
-
-                    }
+                    QueryWeather(b.Lon, b.Lat, b.Alt, ref wind_speed, ref wind_dir);
 
                     if (geom == null)
                         geom = MyCore.NuclearAlgorithm.GetFalloutGeometry(b.Lon, b.Lat, b.Yield, b.Alt, wind_speed, wind_dir);
@@ -508,7 +417,6 @@ namespace SystemAPIApplication.Services
                 }
             }
             return new GeometryMergeVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), 1, 1, "rads/h");
-
         }
         #endregion
 
@@ -755,6 +663,32 @@ namespace SystemAPIApplication.Services
         }
 
         #endregion
+
+        private void QueryWeather(double lng,double lat,double alt,ref double wind_speed ,ref double wind_dir )
+        {
+            //天气接口
+            string url = _config.Weather;//https://localhost:5001/weather
+
+            var timeUtc = (DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000;
+
+            WeatherBO weatherBO = new WeatherBO(lng, lat, alt, timeUtc);
+            string postBody = Newtonsoft.Json.JsonConvert.SerializeObject(weatherBO);
+
+            try
+            {
+                Task<string> s = MyCore.Utils.HttpCli.PostAsyncJson(url, postBody);
+                s.Wait();
+                JObject jo = (JObject)Newtonsoft.Json.JsonConvert.DeserializeObject(s.Result);//或者JObject jo = JObject.Parse(jsonText);
+
+                wind_speed = Double.Parse(jo["return_data"]["wind_speed"].ToString());
+                wind_dir = Double.Parse(jo["return_data"]["wind_dir"].ToString());
+            }
+            catch (Exception)
+            {
+
+            }
+        }
+
 
         internal class LimitUnit
         {
