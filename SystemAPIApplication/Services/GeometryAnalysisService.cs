@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using NetTopologySuite.Geometries;
 using Newtonsoft.Json.Linq;
@@ -11,14 +12,16 @@ namespace SystemAPIApplication.Services
 {
     public class GeometryAnalysisService : IGeometryAnalysisService
     {
-        private readonly IMongoService _mongoService;
-        private ServiceUrls _config;
+        public IConfiguration Configuration { get; }
 
-        public GeometryAnalysisService(IMongoService mongoService, IOptions<ServiceUrls> options)
+        private readonly IMongoService _mongoService;
+
+        public GeometryAnalysisService(IConfiguration configuration,IMongoService mongoService)
         {
+            Configuration = configuration;
+
             _mongoService = mongoService ??
                throw new ArgumentNullException(nameof(mongoService));
-            _config = options.Value;
         }
 
         public List<MultiVO> FireballMulti()
@@ -392,6 +395,9 @@ namespace SystemAPIApplication.Services
 
                 }
             }
+            if (geom == null) 
+                return null;
+
             return new GeometryMergeVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), 1, 1, "rads/h");
         }
         public GeometryMergeVO FalloutMerge(string[] bo)
@@ -416,6 +422,9 @@ namespace SystemAPIApplication.Services
 
                 }
             }
+            if (geom == null)
+                return null;
+
             return new GeometryMergeVO(MyCore.Utils.Translate.Geometry2GeoJson(geom), 1, 1, "rads/h");
         }
         #endregion
@@ -667,7 +676,7 @@ namespace SystemAPIApplication.Services
         private void QueryWeather(double lng,double lat,double alt,ref double wind_speed ,ref double wind_dir )
         {
             //天气接口
-            string url = _config.Weather;//https://localhost:5001/weather
+            string url = Configuration["ServiceUrls:Weather"];//https://localhost:5001/weather
 
             var timeUtc = (DateTime.Now.ToUniversalTime().Ticks - 621355968000000000) / 10000000;
 
