@@ -15,21 +15,31 @@ namespace SystemAPIApplication.Services
     {
         public IConfiguration Configuration { get; }
         private MongoClient _client = null;
+        private MongoClient _otherClient = null;
+
 
         public MongoService(IConfiguration configuration)
         {
             Configuration = configuration;
 
+            string test = Configuration["test:name"];
+            Console.WriteLine(test);
+            
+
             // 自己的库
             string conn = "mongodb://" + Configuration["MongoSetting:Ip"] + ":" + Configuration["MongoSetting:Port"];
             _client = new MongoClient(conn);
+
+            // 别人的库
+            string otherConn = "mongodb://" + Configuration["MongoOtherSetting:Ip"] + ":" + Configuration["MongoOtherSetting:Port"];
+            _otherClient = new MongoClient(otherConn);
         }
 
         
         public List<MockBO> QueryMock(string[] ids)
         {
-            IMongoCollection<MockBO> collection = _client.GetDatabase("MongoSetting:MockSetting:Database").
-                GetCollection<MockBO>("MongoSetting:MockSetting:Collection");
+            IMongoCollection<MockBO> collection = _otherClient.GetDatabase(Configuration["MongoOtherSetting:MockSetting:Database"]).
+                GetCollection<MockBO>(Configuration["MongoOtherSetting:MockSetting:Collection"]);
 
             var filter = Builders<MockBO>.Filter;
             FilterDefinition<MockBO> filterDefinition1 = null;
@@ -59,8 +69,12 @@ namespace SystemAPIApplication.Services
 
         public List<MockBO> QueryMockAll()
         {
-            IMongoCollection<MockBO> collection = _client.GetDatabase("MongoSetting:MockSetting:Database").
-                GetCollection<MockBO>("MongoSetting:MockSetting:Collection");
+            Console.WriteLine("看看"+Configuration["MongoOtherSetting:MockSetting:Database"]);
+            IMongoCollection<MockBO> collection = _otherClient.GetDatabase(Configuration["MongoOtherSetting:MockSetting:Database"]).
+                GetCollection<MockBO>(Configuration["MongoOtherSetting:MockSetting:Collection"]);
+
+            //IMongoCollection<MockBO> collection = _client.GetDatabase("hb").
+            //   GetCollection<MockBO>("hbmock");
 
             var filter = Builders<MockBO>.Filter;
             return collection.Find(filter.Empty).ToList();
@@ -70,7 +84,7 @@ namespace SystemAPIApplication.Services
 
         public RuleBo QueryRule(string name)
         {
-            var collection = _client.GetDatabase("MongoSetting:RuleSetting:Database")
+            var collection = _client.GetDatabase(Configuration["MongoSetting:RuleSetting:Database"])
                                    .GetCollection<BsonDocument>(Configuration["MongoSetting:RuleSetting:Collection"]);
             var list = collection.Find(Builders<BsonDocument>.Filter.Eq("name", name)).ToList();
             foreach (var doc in list)
